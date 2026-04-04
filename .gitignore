@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.log
+.env
+ads_spend.json
+ads_spend.json.broken
+data_cache.json

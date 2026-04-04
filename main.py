@@ -783,4 +783,9 @@ def bulk_ads_entries(payload: list[AdsEntriesPayload], request: Request):
     return {"status": "ok", "updated": updated, "revendas": len(agg)}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8504)
+    host = os.environ.get("HOST", "127.0.0.1").strip() or "127.0.0.1"
+    try:
+        port = int(os.environ.get("PORT", "8504"))
+    except Exception:
+        port = 8504
+    uvicorn.run(app, host=host, port=port)
