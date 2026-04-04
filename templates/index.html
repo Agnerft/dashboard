@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Revendas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <div id="login-overlay" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
+            <div class="absolute inset-0 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-gray-800">Acesso ao Dashboard</div>
+                        <div class="text-sm text-gray-500">Informe suas credenciais</div>
+                    </div>
+                    <div class="space-y-3">
+                        <input id="login-username" type="text" placeholder="Usuário" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <input id="login-password" type="password" placeholder="Senha" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div id="login-error" class="text-sm text-red-600 hidden"></div>
+                    <div class="flex items-center justify-end gap-3">
+                        <button class="px-4 py-2 rounded-lg border bg-white hover:bg-gray-100" onclick="hideLogin()">Cancelar</button>
+                        <button id="login-btn" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" onclick="doLogin()">Entrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">🚀 Dashboard de Revendas</h1>
+                <p class="text-gray-500">Painel de Monitoramento Best</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="user-badge" class="hidden text-sm text-gray-600 mr-2"></div>
+                <select id="period-select" class="bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updateData(false)">
+                    <option value="1">Hoje (00:01)</option>
+                    <option value="7" selected>Últimos 7 dias</option>
+                    <option value="15">Últimos 15 dias</option>
+                    <option value="30">Últimos 30 dias</option>
+                </select>
+                <button id="refresh-btn" onclick="updateData(true)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-sync-alt mr-2"></i> Atualizar
+                </button>
+                <button id="global-ads-btn" onclick="openGlobalAdsModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                    <i class="fas fa-upload mr-2"></i> Lançar ADS (lote)
+                </button>
+                <button id="logout-btn" onclick="doLogout()" class="hidden bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 transition">
+                    Sair
+                </button>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="card p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-semibold uppercase">Total de clientes</p>
+                        <h3 id="kpi-total-clientes" class="text-2xl font-bold text-gray-800">--</h3>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full text-blue-600">
+                        <i class="fas fa-users text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-semibold uppercase">Total de clientes ativos</p>
+                        <h3 id="kpi-ativos-reais" class="text-2xl font-bold text-gray-800">--</h3>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full text-green-600">
+                        <i class="fas fa-user-check text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card p-6 border-l-4 border-orange-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-semibold uppercase">Total de teste</p>
+                        <h3 id="kpi-testes-ativos" class="text-2xl font-bold text-gray-800">--</h3>
+                    </div>
+                    <div class="bg-orange-100 p-3 rounded-full text-orange-600">
+                        <i class="fas fa-user-clock text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card p-6 border-l-4 border-gray-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500 font-semibold uppercase">Total de novos clientes</p>
+                        <h3 id="kpi-novos-clientes" class="text-2xl font-bold text-gray-800">--</h3>
+                    </div>
+                    <div class="bg-gray-100 p-3 rounded-full text-gray-600">
+                        <i class="fas fa-user-plus text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="card overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                    <h4 class="text-lg font-semibold text-gray-700">Detalhamento Atualizado</h4>
+                    <div class="text-sm text-gray-600">
+                        ADS período: <span id="ads-period-total" class="font-semibold text-gray-800">--</span>
+                        <span class="mx-2">|</span>
+                        Período: <span id="ads-period-range" class="font-semibold text-gray-800">--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-600 text-sm uppercase text-center">
+                            <th class="px-4 py-3 font-semibold text-left">Revendedor</th>
+                            <th class="px-4 py-3 font-semibold">Ativos</th>
+                            <th class="px-4 py-3 font-semibold">ADS Período</th>
+                            <th class="px-4 py-3 font-semibold">Vendas (Novos)</th>
+                            <th class="px-4 py-3 font-semibold">Testes (Log)</th>
+                            <th class="px-4 py-3 font-semibold">R$/Venda</th>
+                            <th class="px-4 py-3 font-semibold">Conversão</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="text-gray-700 divide-y divide-gray-100 text-center">
+                        <!-- Rows added by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <footer class="mt-8 text-center text-gray-400 text-sm">
+            Dashboard Atualizado em: <span id="last-update">--</span>
+        </footer>
+    </div>
+
+    <!-- Overlay de Carregamento -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-50">
+        <div class="absolute inset-0 flex items-center justify-center">
+            <div class="bg-white rounded-xl px-6 py-4 shadow-lg flex items-center gap-3">
+                <div class="h-6 w-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span class="text-gray-700 font-semibold">Atualizando dados...</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="ads-modal" class="hidden fixed inset-0 z-50">
+        <div class="absolute inset-0 bg-black/40" onclick="closeAdsModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <div class="px-6 py-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+                    <div>
+                        <div class="text-sm text-gray-500">Investimento em ADS</div>
+                        <div id="ads-modal-title" class="text-lg font-bold text-gray-800">--</div>
+                    </div>
+                    <button class="text-gray-500 hover:text-gray-700" onclick="closeAdsModal()">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6 pb-28">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <div class="text-xs text-gray-500 font-semibold uppercase">Semana (R$)</div>
+                            <div id="ads-week-total" class="text-2xl font-bold text-gray-800">--</div>
+                            <div id="ads-week-range" class="text-xs text-gray-500 mt-1">--</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <div class="text-xs text-gray-500 font-semibold uppercase">Mês (R$)</div>
+                            <div id="ads-month-total" class="text-2xl font-bold text-gray-800">--</div>
+                            <div id="ads-month-range" class="text-xs text-gray-500 mt-1">--</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-xl p-4">
+                            <div class="text-xs text-gray-500 font-semibold uppercase">ROI (período)</div>
+                            <div class="text-sm text-gray-700 mt-2 flex justify-between">
+                                <span>Vendas (novos)</span><span id="ads-roi-sales" class="font-semibold">--</span>
+                            </div>
+                            <div class="text-sm text-gray-700 mt-1 flex justify-between">
+                                <span>R$ / venda</span><span id="ads-roi-cps" class="font-semibold">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <details class="border rounded-xl">
+                        <summary class="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700 cursor-pointer">
+                            Importar TXT (colar)
+                        </summary>
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm text-gray-600">Data (YYYY-MM-DD)</label>
+                                <input id="ads-ingest-date" type="date" class="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700" onclick="ingestTxt(true)">
+                                    Lançar TXT
+                                </button>
+                                <button class="px-3 py-2 rounded-lg bg-gray-600 text-white text-sm hover:bg-gray-700" onclick="ingestTxt(false)">
+                                    Pré-visualizar
+                                </button>
+                            </div>
+                            <textarea id="ads-ingest-text" rows="6" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cole aqui os dois TXT (um por bloco)"></textarea>
+                            <div id="ads-ingest-preview" class="text-sm text-gray-700"></div>
+                        </div>
+                    </details>
+
+                    <details class="border rounded-xl">
+                        <summary class="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700 cursor-pointer">
+                            Importar JSON (arquivo)
+                        </summary>
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center gap-3">
+                                <input id="ads-json-file" type="file" accept="application/json" class="block text-sm text-gray-700" />
+                                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700" onclick="ingestJsonFile()">
+                                    Enviar JSON
+                                </button>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                Formato esperado: lista de objetos { "revenda": "...", "entries": [ { "date": "YYYY-MM-DD", "amount": 123.45 } ] }
+                            </div>
+                            <div id="ads-json-preview" class="text-sm text-gray-700"></div>
+                        </div>
+                    </details>
+
+                    <div class="border rounded-xl overflow-hidden">
+                        <div class="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
+                            <div class="font-semibold text-gray-700">Semana</div>
+                            <div id="ads-week-loading" class="hidden text-sm text-gray-500">
+                                <i class="fas fa-spinner fa-spin mr-2"></i>Carregando...
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <div id="ads-week-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t bg-gray-50 flex items-center justify-end gap-3 sticky bottom-0 z-10">
+                    <button class="px-4 py-2 rounded-lg border bg-white hover:bg-gray-100" onclick="closeAdsModal()">Fechar</button>
+                    <button id="ads-save-btn" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" onclick="saveAdsWeek()">Salvar semana</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ads-global-modal" class="hidden fixed inset-0 z-50">
+        <div class="absolute inset-0 bg-black/40" onclick="closeGlobalAdsModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden">
+                <div class="px-6 py-4 border-b flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-gray-500">Lançamento em lote</div>
+                        <div class="text-lg font-bold text-gray-800">Importar ADS para múltiplas revendas</div>
+                    </div>
+                    <button class="text-gray-500 hover:text-gray-700" onclick="closeGlobalAdsModal()">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6">
+                    <details class="border rounded-xl" open>
+                        <summary class="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700 cursor-pointer">
+                            Importar TXT (colar)
+                        </summary>
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm text-gray-600">Data (YYYY-MM-DD)</label>
+                                <input id="ads-global-date" type="date" class="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700" onclick="ingestGlobalTxt(true)">
+                                    Lançar TXT
+                                </button>
+                                <button class="px-3 py-2 rounded-lg bg-gray-600 text-white text-sm hover:bg-gray-700" onclick="ingestGlobalTxt(false)">
+                                    Pré-visualizar
+                                </button>
+                            </div>
+                            <textarea id="ads-global-text" rows="8" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cole aqui os blocos TXT (um por revenda, separados por linha em branco)"></textarea>
+                            <div id="ads-global-preview" class="text-sm text-gray-700"></div>
+                        </div>
+                    </details>
+                    <details class="border rounded-xl">
+                        <summary class="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700 cursor-pointer">
+                            Importar JSON (arquivo)
+                        </summary>
+                        <div class="p-4 space-y-3">
+                            <div class="flex items-center gap-3">
+                                <input id="ads-global-json-file" type="file" accept="application/json" class="block text-sm text-gray-700" />
+                                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700" onclick="ingestGlobalJsonFile()">
+                                    Enviar JSON
+                                </button>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                Formato: lista de objetos { "revenda": "...", "entries": [ { "date": "YYYY-MM-DD", "amount": 123.45 } ] }
+                            </div>
+                            <div id="ads-global-json-preview" class="text-sm text-gray-700"></div>
+                        </div>
+                    </details>
+                </div>
+                <div class="px-6 py-4 border-t bg-gray-50 flex items-center justify-end gap-3">
+                    <button class="px-4 py-2 rounded-lg border bg-white hover:bg-gray-100" onclick="closeGlobalAdsModal()">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openGlobalAdsModal() {
+            document.getElementById('ads-global-modal').classList.remove('hidden');
+            const p1 = document.getElementById('ads-global-preview');
+            const p2 = document.getElementById('ads-global-json-preview');
+            if (p1) p1.innerHTML = '';
+            if (p2) p2.innerHTML = '';
+        }
+        function closeGlobalAdsModal() {
+            document.getElementById('ads-global-modal').classList.add('hidden');
+        }
+        async function ingestGlobalTxt(save) {
+            const txt = document.getElementById('ads-global-text').value || '';
+            const d = document.getElementById('ads-global-date').value;
+            const preview = document.getElementById('ads-global-preview');
+            preview.innerHTML = '';
+            if (!txt.trim() || !d) {
+                alert('Informe a data e cole o TXT.');
+                return;
+            }
+            try {
+                const resp = await fetch('/api/ads/ingest-txt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({date: d, content: txt, save: !!save})
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Falha ao processar TXT');
+                let html = '<div class="text-gray-700"><div class="font-semibold mb-1">Itens processados:</div><ul class="list-disc ml-5">';
+                (data.parsed || []).forEach(it => {
+                    html += `<li>${it.revenda} — ${it.date} — R$ ${it.amount.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</li>`;
+                });
+                html += '</ul></div>';
+                preview.innerHTML = html;
+                if (save) {
+                    await updateData(true);
+                }
+            } catch (e) {
+                preview.innerHTML = `<div class="text-red-700">Erro ao importar TXT: ${e.message || e}</div>`;
+            }
+        }
+        async function ingestGlobalJsonFile() {
+            const input = document.getElementById('ads-global-json-file');
+            const preview = document.getElementById('ads-global-json-preview');
+            preview.innerHTML = '';
+            if (!input.files || input.files.length === 0) {
+                alert('Escolha um arquivo JSON.');
+                return;
+            }
+            const file = input.files[0];
+            try {
+                const text = await file.text();
+                let payload = JSON.parse(text);
+                if (!Array.isArray(payload)) {
+                    alert('O JSON deve ser um array de objetos.');
+                    return;
+                }
+                const resp = await fetch('/api/ads/bulk-entries', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.detail || 'Falha ao enviar o JSON');
+                }
+                preview.innerHTML = `<div class="text-green-700">Importado com sucesso. Registros atualizados: <b>${data.updated}</b> | Revendas: <b>${data.revendas}</b></div>`;
+                await updateData(true);
+            } catch (e) {
+                preview.innerHTML = `<div class="text-red-700">Erro ao processar JSON: ${e.message || e}</div>`;
+            }
+        }
+        window._rankingData = [];
+        window._selectedRow = null;
+        window._adsWeekDays = [];
+
+        function formatDateBR(value) {
+            const s = (value || '').toString().trim();
+            if (!s) return s;
+            const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+            const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (br) return s;
+            return s;
+        }
+
+        function authToken() {
+            return localStorage.getItem('dash_token') || '';
+        }
+        function setAuthToken(token) {
+            if (token) localStorage.setItem('dash_token', token);
+            else localStorage.removeItem('dash_token');
+        }
+        function showLogin() {
+            document.getElementById('login-overlay').classList.remove('hidden');
+            document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+        }
+        function hideLogin() {
+            document.getElementById('login-overlay').classList.add('hidden');
+        }
+        async function doLogin() {
+            const btn = document.getElementById('login-btn');
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+            const err = document.getElementById('login-error');
+            err.classList.add('hidden');
+            btn.disabled = true; btn.classList.add('opacity-70'); btn.innerText = 'Entrando...';
+            try {
+                const resp = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username: u, password: p})
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'falha');
+                setAuthToken(data.token);
+                hideLogin();
+                await initAuthBadge();
+                await updateData(true);
+            } catch (e) {
+                err.innerText = 'Usuário ou senha inválidos';
+                err.classList.remove('hidden');
+            } finally {
+                btn.disabled = false; btn.classList.remove('opacity-70'); btn.innerText = 'Entrar';
+            }
+        }
+        async function initAuthBadge() {
+            const tok = authToken();
+            if (!tok) {
+                document.getElementById('user-badge').classList.add('hidden');
+                document.getElementById('logout-btn').classList.add('hidden');
+                return;
+            }
+            try {
+                const resp = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + tok }});
+                const data = await resp.json();
+                if (!resp.ok) throw new Error();
+                const badge = document.getElementById('user-badge');
+                badge.innerText = `${data.username} (${data.role}${data.revenda && data.revenda!=='*' ? ' · ' + data.revenda : ''})`;
+                badge.classList.remove('hidden');
+                document.getElementById('logout-btn').classList.remove('hidden');
+            } catch {
+                setAuthToken('');
+                showLogin();
+            }
+        }
+        function doLogout() {
+            setAuthToken('');
+            showLogin();
+        }
+
+        async function updateData(force) {
+            const token = authToken();
+            if (!token) { showLogin(); return; }
+            const period = document.getElementById('period-select').value;
+            const overlay = document.getElementById('loading-overlay');
+            const btn = document.getElementById('refresh-btn');
+            
+            try {
+                if (force) {
+                    overlay.classList.remove('hidden');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.classList.add('opacity-70', 'cursor-not-allowed');
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Atualizando...';
+                    }
+                }
+
+                // Carregamento progressivo:
+                // 1) ADS (rápido e local)
+                const adsResp = await fetch(`/api/ads/all?days=${period}`, { headers: { 'Authorization': 'Bearer ' + token }});
+                if (!adsResp.ok) {
+                    throw new Error('Falha ao carregar ADS (api/ads/all)');
+                }
+                const adsData = await adsResp.json();
+                document.getElementById('ads-period-total').innerText = `R$ ${(adsData.summary.ads_period || 0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                document.getElementById('ads-period-range').innerText = `${formatDateBR(adsData.summary.period_start)} → ${formatDateBR(adsData.summary.period_end)}`;
+
+                // monta base de linhas com ads
+                const baseRows = {};
+                adsData.rows.forEach(r => {
+                    baseRows[r.revenda] = {
+                        revenda: r.revenda,
+                        ativos_reais: 0,
+                        vendas: 0,
+                        testes: 0,
+                        conversao: 0,
+                        ads_period: r.ads_period || 0,
+                        cost_per_sale: 0
+                    };
+                });
+                renderTable(Object.values(baseRows));
+
+                // 2) Ativos (usa cache e atualiza em background)
+                fetch(`/api/partials/ativos?force=${force ? 1 : 0}&days=${period}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(r => r.json()).then(d => {
+                    const ativosList = d.ativos || [];
+                    let totalClientes = 0;
+                    let ativosReaisTotal = 0;
+                    let testesAtivosTotal = 0;
+                    let novosClientesTotal = 0;
+                    ativosList.forEach(a => {
+                        totalClientes += (a.total_clientes || 0);
+                        ativosReaisTotal += (a.ativos_reais || 0);
+                        testesAtivosTotal += (a.testes_ativos || 0);
+                        novosClientesTotal += (a.novos_clientes || 0);
+                    });
+                    document.getElementById('kpi-total-clientes').innerText = totalClientes.toLocaleString();
+                    document.getElementById('kpi-ativos-reais').innerText = ativosReaisTotal.toLocaleString();
+                    document.getElementById('kpi-testes-ativos').innerText = testesAtivosTotal.toLocaleString();
+                    document.getElementById('kpi-novos-clientes').innerText = novosClientesTotal.toLocaleString();
+                    ativosList.forEach(a => {
+                        baseRows[a.name] = baseRows[a.name] || {
+                            revenda: a.name,
+                            ativos_reais: 0,
+                            vendas: 0,
+                            testes: 0,
+                            conversao: 0,
+                            ads_period: 0,
+                            cost_per_sale: 0
+                        };
+                        baseRows[a.name].ativos_reais = a.ativos_reais || 0;
+                    });
+                    renderTable(Object.values(baseRows));
+                }).catch(()=>{});
+
+                // 3) Logs (pode demorar; quando chegar, atualiza vendas/testes/conversões)
+                fetch(`/api/partials/logs?days=${period}&force=${force ? 1 : 0}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(r => r.json()).then(d => {
+                    d.ranking.forEach(row => {
+                        const name = row.revenda;
+                        baseRows[name] = baseRows[name] || {
+                            revenda: name,
+                            ativos_reais: 0,
+                            vendas: 0,
+                            testes: 0,
+                            conversao: 0,
+                            ads_period: 0,
+                            cost_per_sale: 0
+                        };
+                        baseRows[name].vendas = row.vendas || 0;
+                        baseRows[name].testes = row.testes || 0;
+                        baseRows[name].conversao = row.conversao || 0;
+                        const salesTotal = (row.vendas || 0);
+                        const adsPeriod = baseRows[name].ads_period || 0;
+                        baseRows[name].cost_per_sale = salesTotal > 0 ? +(adsPeriod / salesTotal).toFixed(2) : 0;
+                    });
+                    renderTable(Object.values(baseRows));
+                    document.getElementById('last-update').innerText = new Date().toLocaleString();
+                }).catch(()=>{});
+
+            } catch (error) {
+                console.error("Erro ao buscar dados:", error);
+                alert("Falha ao atualizar dados. Verifique a conexão com o servidor.");
+            } finally {
+                if (force) {
+                    overlay.classList.add('hidden');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                        btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Atualizar';
+                    }
+                }
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            const decorated = (data || []).map((item, i) => ({ item, i }));
+            decorated.sort((a, b) => {
+                const aZero = ((a.item?.ativos_reais) || 0) <= 0 ? 1 : 0;
+                const bZero = ((b.item?.ativos_reais) || 0) <= 0 ? 1 : 0;
+                if (aZero !== bZero) return aZero - bZero;
+                return a.i - b.i;
+            });
+            data = decorated.map(x => x.item);
+            window._rankingData = data;
+            
+            data.forEach((item, idx) => {
+                const revenda = item.revenda || item.name || '--';
+                const ativos = item.ativos_reais || 0;
+                const vendas = item.vendas || 0;
+                const testes = item.testes || 0;
+                const conversao = item.conversao || 0;
+                const adsPeriod = item.ads_period || 0;
+                const cps = item.cost_per_sale || 0;
+                const cpt = item.testes ? +(adsPeriod / item.testes).toFixed(2) : 0;
+                const taxaTesteVenda = item.testes ? +((vendas / item.testes) * 100).toFixed(1) : 0;
+                const row = `
+                    <tr class="hover:bg-gray-50 transition cursor-pointer" onclick="openAdsModalByIndex(${idx})">
+                        <td class="px-4 py-4 font-medium text-left">${revenda}</td>
+                        <td class="px-4 py-4 font-bold text-blue-600">${ativos.toLocaleString()} ✅</td>
+                        <td class="px-4 py-4">R$ ${adsPeriod.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                        <td class="px-4 py-4 font-bold text-green-600">${vendas} 💰</td>
+                        <td class="px-4 py-4 text-purple-600">${testes} 🧪</td>
+                        <td class="px-4 py-4 text-gray-700">${cps ? `R$ ${cps.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}` : '--'}</td>
+                        <td class="px-4 py-4 text-gray-700">${cpt ? `R$ ${cpt.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}` : '--'}</td>
+                        <td class="px-4 py-4 text-gray-700">${taxaTesteVenda}%</td>
+                        <td class="px-4 py-4">
+                            <div class="flex items-center justify-center gap-2">
+                                <span class="w-10 text-xs font-bold">${conversao}%</span>
+                                <div class="w-24 bg-gray-200 rounded-full h-1.5">
+                                    <div class="bg-blue-600 h-1.5 rounded-full" style="width: ${conversao}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function openAdsModalByIndex(idx) {
+            const item = window._rankingData[idx];
+            if (!item) return;
+            openAdsModal(item);
+        }
+
+        function closeAdsModal() {
+            const modal = document.getElementById('ads-modal');
+            modal.classList.add('hidden');
+            window._selectedRow = null;
+            window._adsWeekDays = [];
+        }
+
+        async function openAdsModal(item) {
+            window._selectedRow = item;
+            const modal = document.getElementById('ads-modal');
+            document.getElementById('ads-modal-title').innerText = item.revenda;
+            document.getElementById('ads-week-total').innerText = '--';
+            document.getElementById('ads-month-total').innerText = '--';
+            document.getElementById('ads-week-range').innerText = '--';
+            document.getElementById('ads-month-range').innerText = '--';
+
+            const sales = item.vendas || 0;
+            document.getElementById('ads-roi-sales').innerText = sales.toLocaleString();
+            document.getElementById('ads-roi-cps').innerText = '--';
+
+            modal.classList.remove('hidden');
+
+            const loading = document.getElementById('ads-week-loading');
+            loading.classList.remove('hidden');
+
+            try {
+                const token = authToken();
+                const resp = await fetch(`/api/ads/summary?revenda=${encodeURIComponent(item.revenda)}`, { headers: { 'Authorization': 'Bearer ' + token }});
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Falha ao carregar ADS');
+
+                window._adsWeekDays = data.week.days || [];
+
+                document.getElementById('ads-week-total').innerText = (data.week.total || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById('ads-month-total').innerText = (data.month.total || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById('ads-week-range').innerText = `${formatDateBR(data.week.start)} → ${formatDateBR(data.week.end)}`;
+                document.getElementById('ads-month-range').innerText = `${formatDateBR(data.month.start)} → ${formatDateBR(data.month.end)}`;
+
+                const cps = sales > 0 ? (data.week.total / sales) : null;
+                document.getElementById('ads-roi-cps').innerText = cps === null ? '--' : cps.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                renderAdsWeekGrid(window._adsWeekDays);
+            } catch (e) {
+                alert('Erro ao carregar ADS desta revenda.');
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function renderAdsWeekGrid(days) {
+            const grid = document.getElementById('ads-week-grid');
+            grid.innerHTML = '';
+
+            days.forEach((d, idx) => {
+                const inputId = `ads-day-${idx}`;
+                const row = `
+                    <div class="flex items-center justify-between gap-3 bg-gray-50 rounded-lg p-3">
+                        <div class="text-sm font-semibold text-gray-700">${formatDateBR(d.date)}</div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-500">R$</span>
+                            <input id="${inputId}" type="number" step="0.01" min="0" value="${(d.amount || 0)}" class="w-32 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        async function saveAdsWeek() {
+            const item = window._selectedRow;
+            if (!item) return;
+
+            const btn = document.getElementById('ads-save-btn');
+            btn.disabled = true;
+            btn.classList.add('opacity-70', 'cursor-not-allowed');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Salvando...';
+
+            try {
+                const entries = window._adsWeekDays.map((d, idx) => {
+                    const v = parseFloat(document.getElementById(`ads-day-${idx}`).value || '0');
+                    return {date: d.date, amount: isNaN(v) ? 0 : v};
+                });
+
+                const token = authToken();
+                const resp = await fetch('/api/ads/entries', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+                    body: JSON.stringify({revenda: item.revenda, entries})
+                });
+
+                if (!resp.ok) throw new Error('save failed');
+
+                await openAdsModal(item);
+                await updateData(false);
+            } catch (e) {
+                alert('Erro ao salvar ADS.');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-70', 'cursor-not-allowed');
+                btn.innerHTML = 'Salvar semana';
+            }
+        }
+
+        async function ingestTxt(save) {
+            const txt = document.getElementById('ads-ingest-text').value || '';
+            const d = document.getElementById('ads-ingest-date').value;
+            const preview = document.getElementById('ads-ingest-preview');
+            preview.innerHTML = '';
+            if (!txt.trim() || !d) {
+                alert('Informe a data e cole o TXT.');
+                return;
+            }
+            try {
+                const token = authToken();
+                const resp = await fetch('/api/ads/ingest-txt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+                    body: JSON.stringify({date: d, content: txt, save: !!save})
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Falha ao processar TXT');
+                let html = '<div class="text-gray-700"><div class="font-semibold mb-1">Itens processados:</div><ul class="list-disc ml-5">';
+                (data.parsed || []).forEach(it => {
+                    html += `<li>${it.revenda} — ${formatDateBR(it.date)} — R$ ${it.amount.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</li>`;
+                });
+                html += '</ul></div>';
+                preview.innerHTML = html;
+                if (save) {
+                    // Recarrega modal da revenda selecionada, se existir
+                    if (window._selectedRow) {
+                        await openAdsModal(window._selectedRow);
+                    }
+                    await updateData(false);
+                }
+            } catch (e) {
+                alert('Erro ao importar TXT.');
+            }
+        }
+
+        async function ingestJsonFile() {
+            const input = document.getElementById('ads-json-file');
+            const preview = document.getElementById('ads-json-preview');
+            preview.innerHTML = '';
+            if (!input.files || input.files.length === 0) {
+                alert('Escolha um arquivo JSON.');
+                return;
+            }
+            const file = input.files[0];
+            try {
+                const text = await file.text();
+                let payload = JSON.parse(text);
+                if (!Array.isArray(payload)) {
+                    alert('O JSON deve ser um array de objetos.');
+                    return;
+                }
+                const token = authToken();
+                const resp = await fetch('/api/ads/bulk-entries', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.detail || 'Falha ao enviar o JSON');
+                }
+                preview.innerHTML = `<div class="text-green-700">Importado com sucesso. Registros atualizados: <b>${data.updated}</b> | Revendas: <b>${data.revendas}</b></div>`;
+                // Se estiver com uma revenda aberta, recarrega o modal
+                if (window._selectedRow) {
+                    await openAdsModal(window._selectedRow);
+                }
+                await updateData(false);
+            } catch (e) {
+                preview.innerHTML = `<div class="text-red-700">Erro ao processar JSON: ${e.message || e}</div>`;
+            }
+        }
+
+        // Initial load
+        (async () => {
+            await initAuthBadge();
+            if (!authToken()) { showLogin(); return; }
+            updateData(false);
+        })();
+    </script>
+</body>
+</html>
