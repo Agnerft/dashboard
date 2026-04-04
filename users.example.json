@@ -1,0 +1,8 @@
+[
+  {
+    "username": "admin",
+    "password": "troque_essa_senha",
+    "role": "admin",
+    "revenda": "*"
+  }
+]

@@ -4,5 +4,9 @@ services:
     build: .
     container_name: dash_revendas
     ports:
-      - "8501:8501"
+      - "8080:8080"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+      - DASH_AUTH_SECRET=${DASH_AUTH_SECRET}
     restart: unless-stopped

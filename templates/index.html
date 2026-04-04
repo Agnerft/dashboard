@@ -35,6 +35,56 @@
                 </div>
             </div>
         </div>
+        <div id="users-overlay" class="fixed inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" onclick="closeUsersModal()"></div>
+            <div class="absolute inset-0 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <div class="px-6 py-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+                        <div>
+                            <div class="text-sm text-gray-500">Admin</div>
+                            <div class="text-lg font-bold text-gray-800">Usuários</div>
+                        </div>
+                        <button class="text-gray-500 hover:text-gray-700" onclick="closeUsersModal()">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+                    <div class="p-6 space-y-6 pb-28">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <div class="text-sm font-semibold text-gray-700">Novo usuário</div>
+                                <input id="new-user-username" type="text" placeholder="username" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <input id="new-user-password" type="password" placeholder="senha" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <select id="new-user-role" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="user" selected>user</option>
+                                    <option value="admin">admin</option>
+                                </select>
+                                <input id="new-user-revenda" type="text" placeholder="revenda (ex: ADS - MATEUS) ou *" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <div id="users-error" class="text-sm text-red-600 hidden"></div>
+                                <button id="create-user-btn" class="w-full px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" onclick="createUser()">Criar</button>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="text-sm font-semibold text-gray-700">Usuários cadastrados</div>
+                                <div class="border rounded-lg overflow-hidden">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50 text-gray-600 text-xs uppercase">
+                                                <th class="px-3 py-2 font-semibold">Username</th>
+                                                <th class="px-3 py-2 font-semibold">Role</th>
+                                                <th class="px-3 py-2 font-semibold">Revenda</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="users-table-body" class="text-sm text-gray-700 divide-y divide-gray-100"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-t bg-gray-50 flex items-center justify-end gap-3 sticky bottom-0 z-10">
+                        <button class="px-4 py-2 rounded-lg border bg-white hover:bg-gray-100" onclick="closeUsersModal()">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- Header -->
         <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
@@ -54,6 +104,9 @@
                 </button>
                 <button id="global-ads-btn" onclick="openGlobalAdsModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
                     <i class="fas fa-upload mr-2"></i> Lançar ADS (lote)
+                </button>
+                <button id="users-btn" onclick="openUsersModal()" class="hidden bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition">
+                    Usuários
                 </button>
                 <button id="logout-btn" onclick="doLogout()" class="hidden bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 transition">
                     Sair
@@ -441,16 +494,23 @@
             if (!tok) {
                 document.getElementById('user-badge').classList.add('hidden');
                 document.getElementById('logout-btn').classList.add('hidden');
+                document.getElementById('users-btn').classList.add('hidden');
                 return;
             }
             try {
                 const resp = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + tok }});
                 const data = await resp.json();
                 if (!resp.ok) throw new Error();
+                window._authMe = data;
                 const badge = document.getElementById('user-badge');
                 badge.innerText = `${data.username} (${data.role}${data.revenda && data.revenda!=='*' ? ' · ' + data.revenda : ''})`;
                 badge.classList.remove('hidden');
                 document.getElementById('logout-btn').classList.remove('hidden');
+                if (data.role === 'admin') {
+                    document.getElementById('users-btn').classList.remove('hidden');
+                } else {
+                    document.getElementById('users-btn').classList.add('hidden');
+                }
             } catch {
                 setAuthToken('');
                 showLogin();
@@ -459,6 +519,67 @@
         function doLogout() {
             setAuthToken('');
             showLogin();
+        }
+
+        function openUsersModal() {
+            const tok = authToken();
+            if (!tok) { showLogin(); return; }
+            const me = window._authMe || {};
+            if (me.role !== 'admin') return;
+            document.getElementById('users-error').classList.add('hidden');
+            document.getElementById('users-overlay').classList.remove('hidden');
+            loadUsers();
+        }
+        function closeUsersModal() {
+            document.getElementById('users-overlay').classList.add('hidden');
+        }
+        async function loadUsers() {
+            const tok = authToken();
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '';
+            const resp = await fetch('/auth/users', { headers: { 'Authorization': 'Bearer ' + tok }});
+            const data = await resp.json();
+            if (!resp.ok) {
+                document.getElementById('users-error').innerText = data.detail || 'Erro ao listar usuários';
+                document.getElementById('users-error').classList.remove('hidden');
+                return;
+            }
+            (data.users || []).forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="px-3 py-2">${u.username || ''}</td><td class="px-3 py-2">${u.role || ''}</td><td class="px-3 py-2">${u.revenda || ''}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+        async function createUser() {
+            const tok = authToken();
+            const err = document.getElementById('users-error');
+            err.classList.add('hidden');
+            const btn = document.getElementById('create-user-btn');
+            btn.disabled = true;
+            btn.classList.add('opacity-70');
+            try {
+                const username = document.getElementById('new-user-username').value.trim();
+                const password = document.getElementById('new-user-password').value.trim();
+                const role = document.getElementById('new-user-role').value;
+                const revenda = document.getElementById('new-user-revenda').value.trim();
+                const resp = await fetch('/auth/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
+                    body: JSON.stringify({ username, password, role, revenda })
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Erro ao criar usuário');
+                document.getElementById('new-user-username').value = '';
+                document.getElementById('new-user-password').value = '';
+                document.getElementById('new-user-revenda').value = '';
+                await loadUsers();
+            } catch (e) {
+                err.innerText = e.message || 'Erro ao criar usuário';
+                err.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-70');
+            }
         }
 
         async function updateData(force) {

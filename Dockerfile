@@ -12,6 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Porta do Dashboard Web
-EXPOSE 8501
+EXPOSE 8080
 
 CMD ["python", "main.py"]

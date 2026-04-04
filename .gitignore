@@ -5,6 +5,9 @@ __pycache__/
 .Python
 *.log
 .env
+.venv/
+venv/
+users.json
 ads_spend.json
 ads_spend.json.broken
 data_cache.json

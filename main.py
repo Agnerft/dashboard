@@ -11,6 +11,7 @@ import json
 import threading
 import re
 import unicodedata
+import secrets
 from datetime import date, datetime, timedelta, timezone
 from dashboard_data import get_ativos, get_ranking
 import base64
@@ -38,6 +39,7 @@ _REFRESH_THREADS = {}
 
 _USERS_FILE = os.path.join(BASE_DIR, "users.json")
 _AUTH_SECRET = os.environ.get("DASH_AUTH_SECRET", "change-me-local-secret")
+_USERS_LOCK = threading.Lock()
 
 
 class AdsEntry(BaseModel):
@@ -94,6 +96,10 @@ def _save_data_cache(cache):
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
     os.replace(tmp_path, _DATA_CACHE_PATH)
+
+def _norm_text(value):
+    s = "" if value is None else str(value)
+    return re.sub(r"\s+", " ", s).strip()
 
 
 def _parse_date(value: str) -> date:
@@ -207,6 +213,31 @@ def _load_users():
     except Exception:
         return []
 
+def _save_users(users: list[dict]):
+    tmp_path = _USERS_FILE + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(users, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, _USERS_FILE)
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    iterations = 200_000
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+    return "pbkdf2_sha256$" + str(iterations) + "$" + base64.urlsafe_b64encode(salt).decode("ascii").rstrip("=") + "$" + base64.urlsafe_b64encode(dk).decode("ascii").rstrip("=")
+
+def _verify_password(password: str, password_hash: str) -> bool:
+    try:
+        algo, it_s, salt_b64, dk_b64 = (password_hash or "").split("$", 3)
+        if algo != "pbkdf2_sha256":
+            return False
+        iterations = int(it_s)
+        salt = base64.urlsafe_b64decode(salt_b64 + "==")
+        expected = base64.urlsafe_b64decode(dk_b64 + "==")
+        got = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+        return hmac.compare_digest(expected, got)
+    except Exception:
+        return False
+
 def _sign_token(payload: dict) -> str:
     raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
     data = base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii").rstrip("=")
@@ -252,7 +283,16 @@ def login_user(body: dict):
         raise HTTPException(status_code=400, detail="credenciais ausentes")
     users = _load_users()
     for u in users:
-        if u.get("username") == username and str(u.get("password")) == password:
+        if u.get("username") != username:
+            continue
+        stored_hash = u.get("password_hash")
+        stored_plain = u.get("password")
+        ok = False
+        if stored_hash:
+            ok = _verify_password(password, str(stored_hash))
+        elif stored_plain is not None:
+            ok = str(stored_plain) == password
+        if ok:
             role = u.get("role") or "user"
             revenda = u.get("revenda") or ""
             payload = {
@@ -269,6 +309,51 @@ def login_user(body: dict):
 def auth_me(request: Request):
     payload = _auth_scope_from_request(request)
     return {"username": payload.get("username"), "role": payload.get("role"), "revenda": payload.get("revenda")}
+
+@app.get("/auth/users")
+def auth_list_users(request: Request):
+    scope = _auth_scope_from_request(request)
+    if scope.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="forbidden")
+    with _USERS_LOCK:
+        users = _load_users()
+    out = []
+    for u in users:
+        out.append({
+            "username": u.get("username"),
+            "role": u.get("role") or "user",
+            "revenda": u.get("revenda") or "",
+        })
+    return {"users": out}
+
+@app.post("/auth/users")
+def auth_create_user(body: dict, request: Request):
+    scope = _auth_scope_from_request(request)
+    if scope.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="forbidden")
+    username = _norm_text(body.get("username"))
+    password = _norm_text(body.get("password"))
+    role = _norm_text(body.get("role") or "user")
+    revenda = _norm_text(body.get("revenda") or "")
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="username e password são obrigatórios")
+    if role not in ("admin", "user"):
+        raise HTTPException(status_code=400, detail="role inválida")
+    if role == "admin":
+        revenda = "*"
+    with _USERS_LOCK:
+        users = _load_users()
+        for u in users:
+            if u.get("username") == username:
+                raise HTTPException(status_code=409, detail="usuário já existe")
+        users.append({
+            "username": username,
+            "password_hash": _hash_password(password),
+            "role": role,
+            "revenda": revenda,
+        })
+        _save_users(users)
+    return {"status": "ok"}
 
 def _get_ads_canonical():
     from dashboard_data import REVENDEDORES_IDS
