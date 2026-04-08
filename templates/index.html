@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,928 +8,333 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+
+        :root{
+            --bg: #f5f7fb;
+            --bg-soft: #eef2ff;
+            --card: rgba(255,255,255,.88);
+            --card-strong: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: rgba(148,163,184,.22);
+            --shadow: 0 18px 50px rgba(15,23,42,.08);
+            --shadow-sm: 0 8px 24px rgba(15,23,42,.06);
+            --primary: #2563eb;
+            --primary-2: #4f46e5;
+            --success: #16a34a;
+            --warning: #ea580c;
+            --danger: #dc2626;
+            --chip: #eff6ff;
+        }
+        [data-theme="dark"]{
+            --bg: #07111f;
+            --bg-soft: #0b172a;
+            --card: rgba(15,23,42,.84);
+            --card-strong: #111c30;
+            --text: #e5edf9;
+            --muted: #94a3b8;
+            --border: rgba(148,163,184,.16);
+            --shadow: 0 20px 60px rgba(0,0,0,.35);
+            --shadow-sm: 0 8px 24px rgba(0,0,0,.25);
+            --primary: #60a5fa;
+            --primary-2: #818cf8;
+            --success: #4ade80;
+            --warning: #fb923c;
+            --danger: #f87171;
+            --chip: rgba(37,99,235,.12);
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(79,70,229,.16), transparent 28%),
+                radial-gradient(circle at top right, rgba(37,99,235,.14), transparent 24%),
+                linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .glass-card { background: var(--card); backdrop-filter: blur(14px); border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 22px; }
+        .soft-card { background: var(--card-strong); border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: 18px; }
+        .soft-input, .soft-select, .soft-textarea { background: var(--card-strong); color: var(--text); border: 1px solid var(--border); border-radius: 14px; outline: none; transition: .2s ease; }
+        .soft-input:focus, .soft-select:focus, .soft-textarea:focus { border-color: rgba(37,99,235,.45); box-shadow: 0 0 0 4px rgba(37,99,235,.10); }
+        .btn-primary{ background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; border: none; box-shadow: 0 12px 28px rgba(37,99,235,.26); }
+        .btn-secondary{ background: var(--card-strong); color: var(--text); border: 1px solid var(--border); }
+        .btn-success{ background: linear-gradient(135deg, #16a34a, #22c55e); color: white; border: none; box-shadow: 0 12px 28px rgba(34,197,94,.22); }
+        .btn{ border-radius: 14px; padding: .8rem 1rem; font-weight: 700; transition: .2s ease; }
+        .btn:hover{ transform: translateY(-1px); }
+        .page-shell { max-width: 1440px; margin: 0 auto; }
+        .hero { position: relative; overflow: hidden; padding: 1.2rem; }
+        .hero:before{ content:""; position:absolute; inset:0; background: linear-gradient(135deg, rgba(37,99,235,.14), transparent 36%), linear-gradient(225deg, rgba(79,70,229,.12), transparent 32%); pointer-events:none; }
+        .stat-card{ position: relative; overflow: hidden; padding: 1.15rem; }
+        .stat-card:after{ content:""; position:absolute; right:-26px; top:-26px; width:88px; height:88px; border-radius:999px; background: linear-gradient(135deg, rgba(37,99,235,.15), rgba(79,70,229,.06)); }
+        .status-chip{ display:inline-flex; align-items:center; gap:.45rem; border-radius:999px; padding:.45rem .75rem; font-size:.78rem; font-weight:700; border:1px solid var(--border); background: var(--card-strong); color: var(--muted); }
+        .status-chip.done{ color: var(--success); }
+        .status-chip.loading{ color: var(--warning); }
+        .status-chip.error{ color: var(--danger); }
+        .status-dot{ width: .52rem; height: .52rem; border-radius:999px; display:inline-block; background: currentColor; box-shadow: 0 0 0 4px rgba(148,163,184,.08); }
+        .pretty-table { width:100%; border-collapse:separate; border-spacing:0 10px; }
+        .pretty-table thead th{ color: var(--muted); font-size:.74rem; letter-spacing:.07em; text-transform:uppercase; font-weight:800; padding: 0 .95rem .35rem; }
+        .pretty-row > td { background: var(--card-strong); padding: 1rem .95rem; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+        .pretty-row > td:first-child{ border-left:1px solid var(--border); border-top-left-radius:16px; border-bottom-left-radius:16px; }
+        .pretty-row > td:last-child{ border-right:1px solid var(--border); border-top-right-radius:16px; border-bottom-right-radius:16px; }
+        .pretty-row{ cursor:pointer; transition:.18s ease; }
+        .pretty-row:hover{ transform: translateY(-1px); }
+        .expand-row td{ padding: 0 0 .4rem 0; background: transparent !important; border: none !important; }
+        .expand-panel{ margin: .1rem .2rem .3rem; padding: 1rem; background: linear-gradient(180deg, rgba(37,99,235,.04), transparent 18%), var(--card-strong); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-sm); }
+        .expand-hidden{ display:none; }
+        .expand-arrow{ transition: transform .2s ease; color: var(--muted); }
+        .expand-open .expand-arrow{ transform: rotate(90deg); }
+        .progress{ width:100%; height:8px; border-radius:999px; background: rgba(148,163,184,.18); overflow:hidden; }
+        .progress > span{ display:block; height:100%; border-radius:999px; background: linear-gradient(90deg, var(--primary), var(--primary-2)); }
+        .mobile-card{ display:none; }
+        .desktop-table{ display:block; }
+        .skeleton{ position:relative; overflow:hidden; background: linear-gradient(90deg, rgba(148,163,184,.12), rgba(148,163,184,.22), rgba(148,163,184,.12)); background-size: 200% 100%; animation: shimmer 1.1s infinite linear; border-radius: 12px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .pill{ display:inline-flex; align-items:center; gap:.35rem; padding:.38rem .62rem; border-radius:999px; background: var(--chip); color: var(--text); font-size:.76rem; font-weight:700; border: 1px solid var(--border); }
+        .muted { color: var(--muted); }
+        .text-main { color: var(--text); }
+        .text-primary { color: var(--primary); }
+        .text-success { color: var(--success); }
+        .text-warning { color: var(--warning); }
+        .text-danger { color: var(--danger); }
+        details summary{ list-style:none; }
+        details summary::-webkit-details-marker{ display:none; }
+        @media (max-width: 1024px){ .desktop-table{ display:none; } .mobile-card{ display:block; } }
+        @media (max-width: 768px){ body{ padding: 14px !important; } .hero{ padding: 1rem; } .stat-card{ padding: 1rem; } .btn{ width:100%; justify-content:center; } .header-actions{ width:100%; display:grid; grid-template-columns: 1fr 1fr; gap:.7rem; } .header-actions > * { min-width:0; } .top-control-grid{ grid-template-columns: 1fr !important; } .status-grid{ grid-template-columns: 1fr 1fr; } .modal-box{ border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; } }
+        @media (max-width: 520px){ .status-grid{ grid-template-columns: 1fr; } .hero-title{ font-size: 1.55rem; line-height:1.15; } .grid-kpis{ grid-template-columns: 1fr !important; } }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="max-w-7xl mx-auto">
+<body class="p-4 md:p-6">
+    <div class="page-shell space-y-5">
         <div id="login-overlay" class="fixed inset-0 z-50 hidden">
-            <div class="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
             <div class="absolute inset-0 flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+                <div class="modal-box glass-card w-full max-w-md p-6 space-y-4">
                     <div class="text-center">
-                        <div class="text-2xl font-bold text-gray-800">Acesso ao Dashboard</div>
-                        <div class="text-sm text-gray-500">Informe suas credenciais</div>
+                        <div class="text-2xl font-extrabold text-main">Acesso ao Dashboard</div>
+                        <div class="text-sm muted">Informe suas credenciais</div>
                     </div>
                     <div class="space-y-3">
-                        <input id="login-username" type="text" placeholder="Usuário" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        <input id="login-password" type="password" placeholder="Senha" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <input id="login-username" type="text" placeholder="Usuário" class="soft-input w-full px-4 py-3 text-sm" />
+                        <input id="login-password" type="password" placeholder="Senha" class="soft-input w-full px-4 py-3 text-sm" />
                     </div>
-                    <div id="login-error" class="text-sm text-red-600 hidden"></div>
+                    <div id="login-error" class="text-sm text-danger hidden"></div>
                     <div class="flex items-center justify-end gap-3">
-                        <button class="px-4 py-2 rounded-lg border bg-white hover:bg-gray-100" onclick="hideLogin()">Cancelar</button>
-                        <button id="login-btn" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" onclick="doLogin()">Entrar</button>
+                        <button class="btn btn-secondary px-4 py-3" onclick="hideLogin()">Cancelar</button>
+                        <button id="login-btn" class="btn btn-primary px-4 py-3" onclick="doLogin()">Entrar</button>
                     </div>
                 </div>
             </div>
         </div>
+
         <div id="users-overlay" class="fixed inset-0 z-50 hidden">
-            <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" onclick="closeUsersModal()"></div>
+            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeUsersModal()"></div>
             <div class="absolute inset-0 flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <div class="px-6 py-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+                <div class="modal-box glass-card w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <div class="px-6 py-4 border-b flex items-center justify-between sticky top-0 z-10" style="background:var(--card-strong); border-color:var(--border);">
                         <div>
-                            <div class="text-sm text-gray-500">Admin</div>
-                            <div class="text-lg font-bold text-gray-800">Usuários</div>
+                            <div class="text-sm muted">Admin</div>
+                            <div class="text-lg font-bold text-main">Usuários</div>
                         </div>
-                        <button class="text-gray-500 hover:text-gray-700" onclick="closeUsersModal()">
+                        <button class="text-main/70 hover:text-main" onclick="closeUsersModal()">
                             <i class="fas fa-times text-lg"></i>
                         </button>
                     </div>
-                    <div class="p-6 space-y-6 pb-28">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="space-y-2">
-                                <div class="text-sm font-semibold text-gray-700">Novo usuário</div>
-                                <input id="new-user-username" type="text" placeholder="username" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                <input id="new-user-password" type="password" placeholder="senha" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                <select id="new-user-role" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="p-6 space-y-6 pb-24">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div class="soft-card p-4 space-y-3">
+                                <div class="text-sm font-semibold text-main">Novo usuário</div>
+                                <input id="new-user-username" type="text" placeholder="username" class="soft-input w-full px-3 py-3 text-sm" />
+                                <input id="new-user-password" type="password" placeholder="senha" class="soft-input w-full px-3 py-3 text-sm" />
+                                <select id="new-user-role" class="soft-select w-full px-3 py-3 text-sm">
                                     <option value="user" selected>user</option>
                                     <option value="admin">admin</option>
                                 </select>
-                                <input id="new-user-revenda" type="text" placeholder="revenda (ex: ADS - MATEUS) ou *" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                <div id="users-error" class="text-sm text-red-600 hidden"></div>
-                                <button id="create-user-btn" class="w-full px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" onclick="createUser()">Criar</button>
+                                <input id="new-user-revenda" type="text" placeholder="revenda (ex: ADS - MATEUS) ou *" class="soft-input w-full px-3 py-3 text-sm" />
+                                <div id="users-error" class="text-sm text-danger hidden"></div>
+                                <button id="create-user-btn" class="btn btn-primary w-full" onclick="createUser()">Criar</button>
                             </div>
-                            <div class="space-y-2">
-                                <div class="text-sm font-semibold text-gray-700">Usuários cadastrados</div>
-                                <div class="border rounded-lg overflow-hidden">
+                            <div class="soft-card p-4 space-y-2">
+                                <div class="text-sm font-semibold text-main">Usuários cadastrados</div>
+                                <div class="overflow-auto rounded-2xl border" style="border-color:var(--border);">
                                     <table class="w-full text-left border-collapse">
                                         <thead>
-                                            <tr class="bg-gray-50 text-gray-600 text-xs uppercase">
+                                            <tr class="text-xs uppercase" style="background:var(--bg-soft); color:var(--muted);">
                                                 <th class="px-3 py-2 font-semibold">Username</th>
                                                 <th class="px-3 py-2 font-semibold">Role</th>
                                                 <th class="px-3 py-2 font-semibold">Revenda</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="users-table-body" class="text-sm text-gray-700 divide-y divide-gray-100"></tbody>
+                                        <tbody id="users-table-body" class="text-sm divide-y" style="color:var(--text); border-color:var(--border);"></tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="px-6 py-4 border-t bg-gray-50 flex items-center justify-end gap-3 sticky bottom-0 z-10">
-                        <button class="px-4 py-2 rounded-lg border bg-white hover:bg-gray-100" onclick="closeUsersModal()">Fechar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-800">🚀 Dashboard de Revendas</h1>
-                <p class="text-gray-500">Painel de Monitoramento Best</p>
-            </div>
-            <div class="flex items-center gap-4">
-                <div id="user-badge" class="hidden text-sm text-gray-600 mr-2"></div>
-                <select id="period-select" class="bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updateData(false)">
-                    <option value="1">Hoje (00:01)</option>
-                    <option value="7" selected>Últimos 7 dias</option>
-                    <option value="15">Últimos 15 dias</option>
-                    <option value="30">Últimos 30 dias</option>
-                </select>
-                <button id="refresh-btn" onclick="updateData(true)" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
-                    <i class="fas fa-sync-alt mr-2"></i> Atualizar
-                </button>
-                <button id="global-ads-btn" onclick="openGlobalAdsModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
-                    <i class="fas fa-upload mr-2"></i> Lançar ADS (lote)
-                </button>
-                <button id="users-btn" onclick="openUsersModal()" class="hidden bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition">
-                    Usuários
-                </button>
-                <button id="logout-btn" onclick="doLogout()" class="hidden bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 transition">
-                    Sair
-                </button>
-            </div>
-        </div>
-
-        <!-- KPI Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="card p-6 border-l-4 border-blue-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 font-semibold uppercase">Total de clientes</p>
-                        <h3 id="kpi-total-clientes" class="text-2xl font-bold text-gray-800">--</h3>
-                    </div>
-                    <div class="bg-blue-100 p-3 rounded-full text-blue-600">
-                        <i class="fas fa-users text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="card p-6 border-l-4 border-green-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 font-semibold uppercase">Total de clientes ativos</p>
-                        <h3 id="kpi-ativos-reais" class="text-2xl font-bold text-gray-800">--</h3>
-                    </div>
-                    <div class="bg-green-100 p-3 rounded-full text-green-600">
-                        <i class="fas fa-user-check text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="card p-6 border-l-4 border-orange-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 font-semibold uppercase">Total de teste</p>
-                        <h3 id="kpi-testes-ativos" class="text-2xl font-bold text-gray-800">--</h3>
-                    </div>
-                    <div class="bg-orange-100 p-3 rounded-full text-orange-600">
-                        <i class="fas fa-user-clock text-xl"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="card p-6 border-l-4 border-gray-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 font-semibold uppercase">Total de novos clientes</p>
-                        <h3 id="kpi-novos-clientes" class="text-2xl font-bold text-gray-800">--</h3>
-                    </div>
-                    <div class="bg-gray-100 p-3 rounded-full text-gray-600">
-                        <i class="fas fa-user-plus text-xl"></i>
+                    <div class="px-6 py-4 border-t flex items-center justify-end gap-3 sticky bottom-0 z-10" style="background:var(--card-strong); border-color:var(--border);">
+                        <button class="btn btn-secondary" onclick="closeUsersModal()">Fechar</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Table -->
-        <div class="card overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <h4 class="text-lg font-semibold text-gray-700">Detalhamento Atualizado</h4>
-                    <div class="text-sm text-gray-600">
-                        ADS período: <span id="ads-period-total" class="font-semibold text-gray-800">--</span>
-                        <span class="mx-2">|</span>
-                        Período: <span id="ads-period-range" class="font-semibold text-gray-800">--</span>
+        <section class="glass-card hero">
+            <div class="relative z-10">
+                <div class="top-control-grid grid grid-cols-[1.2fr_.8fr] gap-4 items-start">
+                    <div>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <span class="pill"><i class="fas fa-sparkles"></i> Versão premium</span>
+                            <span class="pill"><i class="fas fa-mobile-screen"></i> Mobile ready</span>
+                        </div>
+                        <h1 class="hero-title mt-3 text-3xl md:text-4xl font-extrabold tracking-tight text-main">🚀 Dashboard de Revendas</h1>
+                        <p class="mt-2 muted max-w-2xl">Painel mais rápido, amigável e pronto para celular. Clique em uma revenda para abrir os detalhes logo abaixo da linha.</p>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3 flex-wrap">
+                            <div id="user-badge" class="hidden text-sm font-semibold muted"></div>
+                            <button id="theme-toggle" class="btn btn-secondary px-4 py-3" onclick="toggleTheme()">
+                                <i class="fas fa-moon mr-2"></i><span id="theme-toggle-label">Escuro</span>
+                            </button>
+                        </div>
+                        <div class="header-actions">
+                            <select id="period-select" class="soft-select w-full px-4 py-3 text-sm font-semibold" onchange="updateData(false)">
+                                <option value="today">Hoje</option>
+                                <option value="yesterday">Ontem</option>
+                                <option value="7" selected>Últimos 7 dias</option>
+                                <option value="15">Últimos 15 dias</option>
+                                <option value="30">Últimos 30 dias</option>
+                            </select>
+                            <button id="refresh-btn" onclick="updateData(true)" class="btn btn-primary">
+                                <i class="fas fa-sync-alt mr-2"></i> Atualizar
+                            </button>
+                            <button id="global-ads-btn" onclick="openGlobalAdsModal()" class="btn btn-success">
+                                <i class="fas fa-upload mr-2"></i> Lançar ADS
+                            </button>
+                            <button id="users-btn" onclick="openUsersModal()" class="hidden btn btn-secondary">
+                                <i class="fas fa-user-shield mr-2"></i> Usuários
+                            </button>
+                            <button id="logout-btn" onclick="doLogout()" class="hidden btn btn-secondary">
+                                <i class="fas fa-right-from-bracket mr-2"></i> Sair
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                <div class="status-grid grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+                    <div id="status-ads" class="status-chip"><span class="status-dot"></span><span>ADS aguardando</span></div>
+                    <div id="status-ativos" class="status-chip"><span class="status-dot"></span><span>Ativos aguardando</span></div>
+                    <div id="status-vendas" class="status-chip"><span class="status-dot"></span><span>Vendas aguardando</span></div>
+                    <div id="status-testes" class="status-chip"><span class="status-dot"></span><span>Testes aguardando</span></div>
+                </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-50 text-gray-600 text-sm uppercase text-center">
-                            <th class="px-4 py-3 font-semibold text-left">Revendedor</th>
-                            <th class="px-4 py-3 font-semibold">Ativos</th>
-                            <th class="px-4 py-3 font-semibold">ADS Período</th>
-                            <th class="px-4 py-3 font-semibold">Vendas (Novos)</th>
-                            <th class="px-4 py-3 font-semibold">Testes (Log)</th>
-                            <th class="px-4 py-3 font-semibold">R$/Venda</th>
-                            <th class="px-4 py-3 font-semibold">Conversão</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body" class="text-gray-700 divide-y divide-gray-100 text-center">
-                        <!-- Rows added by JS -->
-                    </tbody>
+        </section>
+
+        <section class="grid-kpis grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div class="glass-card stat-card"><div class="relative z-10 flex items-start justify-between gap-4"><div><p class="text-xs uppercase tracking-[.18em] font-extrabold muted">Total de clientes</p><h3 id="kpi-total-clientes" class="mt-2 text-3xl font-extrabold text-main">--</h3><div class="mt-3 text-sm muted">Base geral cadastrada</div></div><div class="h-14 w-14 rounded-2xl flex items-center justify-center text-primary" style="background:rgba(37,99,235,.10);"><i class="fas fa-users text-xl"></i></div></div></div>
+            <div class="glass-card stat-card"><div class="relative z-10 flex items-start justify-between gap-4"><div><p class="text-xs uppercase tracking-[.18em] font-extrabold muted">Clientes ativos</p><h3 id="kpi-ativos-reais" class="mt-2 text-3xl font-extrabold text-main">--</h3><div class="mt-3 text-sm text-success font-semibold">✅ Receita em manutenção</div></div><div class="h-14 w-14 rounded-2xl flex items-center justify-center text-success" style="background:rgba(34,197,94,.10);"><i class="fas fa-user-check text-xl"></i></div></div></div>
+            <div class="glass-card stat-card"><div class="relative z-10 flex items-start justify-between gap-4"><div><p class="text-xs uppercase tracking-[.18em] font-extrabold muted">Testes ativos</p><h3 id="kpi-testes-ativos" class="mt-2 text-3xl font-extrabold text-main">--</h3><div class="mt-3 text-sm text-warning font-semibold">🧪 Oportunidade de conversão</div></div><div class="h-14 w-14 rounded-2xl flex items-center justify-center text-warning" style="background:rgba(234,88,12,.10);"><i class="fas fa-flask text-xl"></i></div></div></div>
+            <div class="glass-card stat-card"><div class="relative z-10 flex items-start justify-between gap-4"><div><p class="text-xs uppercase tracking-[.18em] font-extrabold muted">Novos clientes</p><h3 id="kpi-novos-clientes" class="mt-2 text-3xl font-extrabold text-main">--</h3><div class="mt-3 text-sm muted">Entradas no período</div></div><div class="h-14 w-14 rounded-2xl flex items-center justify-center" style="color:#8b5cf6; background:rgba(139,92,246,.10);"><i class="fas fa-user-plus text-xl"></i></div></div></div>
+        </section>
+
+        <section class="glass-card p-4 md:p-5">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-3 border-b" style="border-color:var(--border);">
+                <div>
+                    <h4 class="text-xl font-extrabold text-main">Detalhamento Atualizado</h4>
+                    <p class="text-sm muted mt-1">Clique na revenda para abrir os detalhes logo abaixo, sem popup.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 text-sm">
+                    <div class="pill">ADS período: <span id="ads-period-total" class="font-bold ml-1">--</span></div>
+                    <div class="pill">Período: <span id="ads-period-range" class="font-bold ml-1">--</span></div>
+                </div>
+            </div>
+
+            <div id="desktop-table-wrap" class="desktop-table mt-4">
+                <table class="pretty-table">
+                    <thead><tr><th class="text-left">Revenda</th><th>Ativos</th><th>ADS período</th><th>Vendas</th><th>Testes</th><th>R$/Venda</th><th>Conversão</th></tr></thead>
+                    <tbody id="table-body"></tbody>
                 </table>
             </div>
-        </div>
-        
-        <footer class="mt-8 text-center text-gray-400 text-sm">
-            Dashboard Atualizado em: <span id="last-update">--</span>
-        </footer>
+            <div id="mobile-cards-wrap" class="mobile-card mt-4 space-y-3"></div>
+        </section>
+
+        <footer class="pb-3 text-center muted text-sm">Dashboard atualizado em: <span id="last-update">--</span></footer>
     </div>
 
-    <!-- Overlay de Carregamento -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-50">
-        <div class="absolute inset-0 flex items-center justify-center">
-            <div class="bg-white rounded-xl px-6 py-4 shadow-lg flex items-center gap-3">
-                <div class="h-6 w-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <span class="text-gray-700 font-semibold">Atualizando dados...</span>
-            </div>
-        </div>
-    </div>
-
-    <div id="ads-modal" class="hidden fixed inset-0 z-50">
-        <div class="absolute inset-0 bg-black/40" onclick="closeAdsModal()"></div>
-        <div class="absolute inset-0 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div class="px-6 py-4 border-b flex items-center justify-between sticky top-0 bg-white z-10">
-                    <div>
-                        <div class="text-sm text-gray-500">Investimento em ADS</div>
-                        <div id="ads-modal-title" class="text-lg font-bold text-gray-800">--</div>
-                    </div>
-                    <button class="text-gray-500 hover:text-gray-700" onclick="closeAdsModal()">
-                        <i class="fas fa-times text-lg"></i>
-                    </button>
-                </div>
-                <div class="p-6 space-y-6 pb-28">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-gray-50 rounded-xl p-4">
-                            <div class="text-xs text-gray-500 font-semibold uppercase">Semana (R$)</div>
-                            <div id="ads-week-total" class="text-2xl font-bold text-gray-800">--</div>
-                            <div id="ads-week-range" class="text-xs text-gray-500 mt-1">--</div>
-                        </div>
-                        <div class="bg-gray-50 rounded-xl p-4">
-                            <div class="text-xs text-gray-500 font-semibold uppercase">Mês (R$)</div>
-                            <div id="ads-month-total" class="text-2xl font-bold text-gray-800">--</div>
-                            <div id="ads-month-range" class="text-xs text-gray-500 mt-1">--</div>
-                        </div>
-                        <div class="bg-gray-50 rounded-xl p-4">
-                            <div class="text-xs text-gray-500 font-semibold uppercase">ROI (período)</div>
-                            <div class="text-sm text-gray-700 mt-2 flex justify-between">
-                                <span>Vendas (novos)</span><span id="ads-roi-sales" class="font-semibold">--</span>
-                            </div>
-                            <div class="text-sm text-gray-700 mt-1 flex justify-between">
-                                <span>R$ / venda</span><span id="ads-roi-cps" class="font-semibold">--</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <details class="border rounded-xl">
-                        <summary class="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700 cursor-pointer">
-                            Importar TXT (colar)
-                        </summary>
-                        <div class="p-4 space-y-3">
-                            <div class="flex items-center gap-3">
-                                <label class="text-sm text-gray-600">Data (YYYY-MM-DD)</label>
-                                <input id="ads-ingest-date" type="date" class="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700" onclick="ingestTxt(true)">
-                                    Lançar TXT
-                                </button>
-                                <button class="px-3 py-2 rounded-lg bg-gray-600 text-white text-sm hover:bg-gray-700" onclick="ingestTxt(false)">
-                                    Pré-visualizar
-                                </button>
-                            </div>
-                            <textarea id="ads-ingest-text" rows="6" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cole aqui os dois TXT (um por bloco)"></textarea>
-                            <div id="ads-ingest-preview" class="text-sm text-gray-700"></div>
-                        </div>
-                    </details>
-
-                    <details class="border rounded-xl">
-                        <summary class="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700 cursor-pointer">
-                            Importar JSON (arquivo)
-                        </summary>
-                        <div class="p-4 space-y-3">
-                            <div class="flex items-center gap-3">
-                                <input id="ads-json-file" type="file" accept="application/json" class="block text-sm text-gray-700" />
-                                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700" onclick="ingestJsonFile()">
-                                    Enviar JSON
-                                </button>
-                            </div>
-                            <div class="text-xs text-gray-500">
-                                Formato esperado: lista de objetos { "revenda": "...", "entries": [ { "date": "YYYY-MM-DD", "amount": 123.45 } ] }
-                            </div>
-                            <div id="ads-json-preview" class="text-sm text-gray-700"></div>
-                        </div>
-                    </details>
-
-                    <div class="border rounded-xl overflow-hidden">
-                        <div class="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
-                            <div class="font-semibold text-gray-700">Semana</div>
-                            <div id="ads-week-loading" class="hidden text-sm text-gray-500">
-                                <i class="fas fa-spinner fa-spin mr-2"></i>Carregando...
-                            </div>
-                        </div>
-                        <div class="p-4">
-                            <div id="ads-week-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="px-6 py-4 border-t bg-gray-50 flex items-center justify-end gap-3 sticky bottom-0 z-10">
-                    <button class="px-4 py-2 rounded-lg border bg-white hover:bg-gray-100" onclick="closeAdsModal()">Fechar</button>
-                    <button id="ads-save-btn" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" onclick="saveAdsWeek()">Salvar semana</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black/28 backdrop-blur-sm z-50"><div class="absolute inset-0 flex items-center justify-center p-4"><div class="glass-card px-6 py-5 shadow-2xl flex items-center gap-3"><div class="h-7 w-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div><div><div class="font-bold text-main">Atualizando dados...</div><div class="text-sm muted">Carregando blocos do painel</div></div></div></div></div>
 
     <div id="ads-global-modal" class="hidden fixed inset-0 z-50">
-        <div class="absolute inset-0 bg-black/40" onclick="closeGlobalAdsModal()"></div>
-        <div class="absolute inset-0 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden">
-                <div class="px-6 py-4 border-b flex items-center justify-between">
-                    <div>
-                        <div class="text-sm text-gray-500">Lançamento em lote</div>
-                        <div class="text-lg font-bold text-gray-800">Importar ADS para múltiplas revendas</div>
-                    </div>
-                    <button class="text-gray-500 hover:text-gray-700" onclick="closeGlobalAdsModal()">
-                        <i class="fas fa-times text-lg"></i>
-                    </button>
-                </div>
-                <div class="p-6 space-y-6">
-                    <details class="border rounded-xl" open>
-                        <summary class="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700 cursor-pointer">
-                            Importar TXT (colar)
-                        </summary>
-                        <div class="p-4 space-y-3">
-                            <div class="flex items-center gap-3">
-                                <label class="text-sm text-gray-600">Data (YYYY-MM-DD)</label>
-                                <input id="ads-global-date" type="date" class="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700" onclick="ingestGlobalTxt(true)">
-                                    Lançar TXT
-                                </button>
-                                <button class="px-3 py-2 rounded-lg bg-gray-600 text-white text-sm hover:bg-gray-700" onclick="ingestGlobalTxt(false)">
-                                    Pré-visualizar
-                                </button>
-                            </div>
-                            <textarea id="ads-global-text" rows="8" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Cole aqui os blocos TXT (um por revenda, separados por linha em branco)"></textarea>
-                            <div id="ads-global-preview" class="text-sm text-gray-700"></div>
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeGlobalAdsModal()"></div>
+        <div class="absolute inset-0 flex items-end md:items-center justify-center p-0 md:p-4">
+            <div class="modal-box glass-card w-full max-w-3xl max-h-[94vh] overflow-hidden">
+                <div class="px-6 py-4 border-b flex items-center justify-between" style="border-color:var(--border);"><div><div class="text-sm muted">Lançamento em lote</div><div class="text-lg font-bold text-main">Importar ADS para múltiplas revendas</div></div><button class="text-main/70 hover:text-main" onclick="closeGlobalAdsModal()"><i class="fas fa-times text-lg"></i></button></div>
+                <div class="p-6 space-y-5 overflow-y-auto max-h-[78vh]">
+                    <details class="soft-card overflow-hidden" open>
+                        <summary class="px-4 py-4 font-semibold cursor-pointer text-main flex items-center justify-between"><span><i class="fas fa-caret-right mr-2"></i> Importar TXT (colar)</span></summary>
+                        <div class="p-4 space-y-3 border-t" style="border-color:var(--border);">
+                            <div class="flex flex-col md:flex-row items-start md:items-center gap-3"><label class="text-sm muted">Data (YYYY-MM-DD)</label><input id="ads-global-date" type="date" class="soft-input px-3 py-3 text-sm" /><button class="btn btn-primary px-4 py-3" onclick="ingestGlobalTxt(true)">Lançar TXT</button><button class="btn btn-secondary px-4 py-3" onclick="ingestGlobalTxt(false)">Pré-visualizar</button></div>
+                            <textarea id="ads-global-text" rows="8" class="soft-textarea w-full px-3 py-3 text-sm" placeholder="Cole aqui os blocos TXT (um por revenda, separados por linha em branco)"></textarea>
+                            <div id="ads-global-preview" class="text-sm"></div>
                         </div>
                     </details>
-                    <details class="border rounded-xl">
-                        <summary class="px-4 py-3 bg-gray-50 border-b font-semibold text-gray-700 cursor-pointer">
-                            Importar JSON (arquivo)
-                        </summary>
-                        <div class="p-4 space-y-3">
-                            <div class="flex items-center gap-3">
-                                <input id="ads-global-json-file" type="file" accept="application/json" class="block text-sm text-gray-700" />
-                                <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700" onclick="ingestGlobalJsonFile()">
-                                    Enviar JSON
-                                </button>
-                            </div>
-                            <div class="text-xs text-gray-500">
-                                Formato: lista de objetos { "revenda": "...", "entries": [ { "date": "YYYY-MM-DD", "amount": 123.45 } ] }
-                            </div>
-                            <div id="ads-global-json-preview" class="text-sm text-gray-700"></div>
+                    <details class="soft-card overflow-hidden">
+                        <summary class="px-4 py-4 font-semibold cursor-pointer text-main flex items-center justify-between"><span><i class="fas fa-caret-right mr-2"></i> Importar JSON (arquivo)</span></summary>
+                        <div class="p-4 space-y-3 border-t" style="border-color:var(--border);">
+                            <div class="flex flex-col md:flex-row items-start md:items-center gap-3"><input id="ads-global-json-file" type="file" accept="application/json" class="block text-sm muted" /><button class="btn btn-primary px-4 py-3" onclick="ingestGlobalJsonFile()">Enviar JSON</button></div>
+                            <div class="text-xs muted">Formato: lista de objetos { "revenda": "...", "entries": [ { "date": "YYYY-MM-DD", "amount": 123.45 } ] }</div>
+                            <div id="ads-global-json-preview" class="text-sm"></div>
                         </div>
                     </details>
                 </div>
-                <div class="px-6 py-4 border-t bg-gray-50 flex items-center justify-end gap-3">
-                    <button class="px-4 py-2 rounded-lg border bg-white hover:bg-gray-100" onclick="closeGlobalAdsModal()">Fechar</button>
-                </div>
+                <div class="px-6 py-4 border-t flex items-center justify-end gap-3" style="border-color:var(--border);"><button class="btn btn-secondary" onclick="closeGlobalAdsModal()">Fechar</button></div>
             </div>
         </div>
     </div>
 
     <script>
-        function openGlobalAdsModal() {
-            document.getElementById('ads-global-modal').classList.remove('hidden');
-            const p1 = document.getElementById('ads-global-preview');
-            const p2 = document.getElementById('ads-global-json-preview');
-            if (p1) p1.innerHTML = '';
-            if (p2) p2.innerHTML = '';
-        }
-        function closeGlobalAdsModal() {
-            document.getElementById('ads-global-modal').classList.add('hidden');
-        }
-        async function ingestGlobalTxt(save) {
-            const txt = document.getElementById('ads-global-text').value || '';
-            const d = document.getElementById('ads-global-date').value;
-            const preview = document.getElementById('ads-global-preview');
-            preview.innerHTML = '';
-            if (!txt.trim() || !d) {
-                alert('Informe a data e cole o TXT.');
-                return;
-            }
-            try {
-                const resp = await fetch('/api/ads/ingest-txt', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({date: d, content: txt, save: !!save})
-                });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.detail || 'Falha ao processar TXT');
-                let html = '<div class="text-gray-700"><div class="font-semibold mb-1">Itens processados:</div><ul class="list-disc ml-5">';
-                (data.parsed || []).forEach(it => {
-                    html += `<li>${it.revenda} — ${it.date} — R$ ${it.amount.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</li>`;
-                });
-                html += '</ul></div>';
-                preview.innerHTML = html;
-                if (save) {
-                    await updateData(true);
-                }
-            } catch (e) {
-                preview.innerHTML = `<div class="text-red-700">Erro ao importar TXT: ${e.message || e}</div>`;
-            }
-        }
-        async function ingestGlobalJsonFile() {
-            const input = document.getElementById('ads-global-json-file');
-            const preview = document.getElementById('ads-global-json-preview');
-            preview.innerHTML = '';
-            if (!input.files || input.files.length === 0) {
-                alert('Escolha um arquivo JSON.');
-                return;
-            }
-            const file = input.files[0];
-            try {
-                const text = await file.text();
-                let payload = JSON.parse(text);
-                if (!Array.isArray(payload)) {
-                    alert('O JSON deve ser um array de objetos.');
-                    return;
-                }
-                const resp = await fetch('/api/ads/bulk-entries', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await resp.json();
-                if (!resp.ok) {
-                    throw new Error(data.detail || 'Falha ao enviar o JSON');
-                }
-                preview.innerHTML = `<div class="text-green-700">Importado com sucesso. Registros atualizados: <b>${data.updated}</b> | Revendas: <b>${data.revendas}</b></div>`;
-                await updateData(true);
-            } catch (e) {
-                preview.innerHTML = `<div class="text-red-700">Erro ao processar JSON: ${e.message || e}</div>`;
-            }
-        }
-        window._rankingData = [];
-        window._selectedRow = null;
-        window._adsWeekDays = [];
-
-        function formatDateBR(value) {
-            const s = (value || '').toString().trim();
-            if (!s) return s;
-            const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
-            const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-            if (br) return s;
-            return s;
-        }
-
-        function authToken() {
-            return localStorage.getItem('dash_token') || '';
-        }
-        function setAuthToken(token) {
-            if (token) localStorage.setItem('dash_token', token);
-            else localStorage.removeItem('dash_token');
-        }
-        function showLogin() {
-            document.getElementById('login-overlay').classList.remove('hidden');
-            document.getElementById('login-error').classList.add('hidden');
-            document.getElementById('login-username').value = '';
-            document.getElementById('login-password').value = '';
-        }
-        function hideLogin() {
-            document.getElementById('login-overlay').classList.add('hidden');
-        }
-        async function doLogin() {
-            const btn = document.getElementById('login-btn');
-            const u = document.getElementById('login-username').value.trim();
-            const p = document.getElementById('login-password').value.trim();
-            const err = document.getElementById('login-error');
-            err.classList.add('hidden');
-            btn.disabled = true; btn.classList.add('opacity-70'); btn.innerText = 'Entrando...';
-            try {
-                const resp = await fetch('/auth/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({username: u, password: p})
-                });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.detail || 'falha');
-                setAuthToken(data.token);
-                hideLogin();
-                await initAuthBadge();
-                await updateData(true);
-            } catch (e) {
-                err.innerText = 'Usuário ou senha inválidos';
-                err.classList.remove('hidden');
-            } finally {
-                btn.disabled = false; btn.classList.remove('opacity-70'); btn.innerText = 'Entrar';
-            }
-        }
-        async function initAuthBadge() {
-            const tok = authToken();
-            if (!tok) {
-                document.getElementById('user-badge').classList.add('hidden');
-                document.getElementById('logout-btn').classList.add('hidden');
-                document.getElementById('users-btn').classList.add('hidden');
-                return;
-            }
-            try {
-                const resp = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + tok }});
-                const data = await resp.json();
-                if (!resp.ok) throw new Error();
-                window._authMe = data;
-                const badge = document.getElementById('user-badge');
-                badge.innerText = `${data.username} (${data.role}${data.revenda && data.revenda!=='*' ? ' · ' + data.revenda : ''})`;
-                badge.classList.remove('hidden');
-                document.getElementById('logout-btn').classList.remove('hidden');
-                if (data.role === 'admin') {
-                    document.getElementById('users-btn').classList.remove('hidden');
-                } else {
-                    document.getElementById('users-btn').classList.add('hidden');
-                }
-            } catch {
-                setAuthToken('');
-                showLogin();
-            }
-        }
-        function doLogout() {
-            setAuthToken('');
-            showLogin();
-        }
-
-        function openUsersModal() {
-            const tok = authToken();
-            if (!tok) { showLogin(); return; }
-            const me = window._authMe || {};
-            if (me.role !== 'admin') return;
-            document.getElementById('users-error').classList.add('hidden');
-            document.getElementById('users-overlay').classList.remove('hidden');
-            loadUsers();
-        }
-        function closeUsersModal() {
-            document.getElementById('users-overlay').classList.add('hidden');
-        }
-        async function loadUsers() {
-            const tok = authToken();
-            const tbody = document.getElementById('users-table-body');
-            tbody.innerHTML = '';
-            const resp = await fetch('/auth/users', { headers: { 'Authorization': 'Bearer ' + tok }});
-            const data = await resp.json();
-            if (!resp.ok) {
-                document.getElementById('users-error').innerText = data.detail || 'Erro ao listar usuários';
-                document.getElementById('users-error').classList.remove('hidden');
-                return;
-            }
-            (data.users || []).forEach(u => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="px-3 py-2">${u.username || ''}</td><td class="px-3 py-2">${u.role || ''}</td><td class="px-3 py-2">${u.revenda || ''}</td>`;
-                tbody.appendChild(tr);
-            });
-        }
-        async function createUser() {
-            const tok = authToken();
-            const err = document.getElementById('users-error');
-            err.classList.add('hidden');
-            const btn = document.getElementById('create-user-btn');
-            btn.disabled = true;
-            btn.classList.add('opacity-70');
-            try {
-                const username = document.getElementById('new-user-username').value.trim();
-                const password = document.getElementById('new-user-password').value.trim();
-                const role = document.getElementById('new-user-role').value;
-                const revenda = document.getElementById('new-user-revenda').value.trim();
-                const resp = await fetch('/auth/users', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok },
-                    body: JSON.stringify({ username, password, role, revenda })
-                });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.detail || 'Erro ao criar usuário');
-                document.getElementById('new-user-username').value = '';
-                document.getElementById('new-user-password').value = '';
-                document.getElementById('new-user-revenda').value = '';
-                await loadUsers();
-            } catch (e) {
-                err.innerText = e.message || 'Erro ao criar usuário';
-                err.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                btn.classList.remove('opacity-70');
-            }
-        }
-
-        async function updateData(force) {
-            const token = authToken();
-            if (!token) { showLogin(); return; }
-            const period = document.getElementById('period-select').value;
-            const overlay = document.getElementById('loading-overlay');
-            const btn = document.getElementById('refresh-btn');
-            
-            try {
-                if (force) {
-                    overlay.classList.remove('hidden');
-                    if (btn) {
-                        btn.disabled = true;
-                        btn.classList.add('opacity-70', 'cursor-not-allowed');
-                        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Atualizando...';
-                    }
-                }
-
-                // Carregamento progressivo:
-                // 1) ADS (rápido e local)
-                const adsResp = await fetch(`/api/ads/all?days=${period}`, { headers: { 'Authorization': 'Bearer ' + token }});
-                if (!adsResp.ok) {
-                    throw new Error('Falha ao carregar ADS (api/ads/all)');
-                }
-                const adsData = await adsResp.json();
-                document.getElementById('ads-period-total').innerText = `R$ ${(adsData.summary.ads_period || 0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}`;
-                document.getElementById('ads-period-range').innerText = `${formatDateBR(adsData.summary.period_start)} → ${formatDateBR(adsData.summary.period_end)}`;
-
-                // monta base de linhas com ads
-                const baseRows = {};
-                adsData.rows.forEach(r => {
-                    baseRows[r.revenda] = {
-                        revenda: r.revenda,
-                        ativos_reais: 0,
-                        vendas: 0,
-                        testes: 0,
-                        conversao: 0,
-                        ads_period: r.ads_period || 0,
-                        cost_per_sale: 0
-                    };
-                });
-                renderTable(Object.values(baseRows));
-
-                // 2) Ativos (usa cache e atualiza em background)
-                fetch(`/api/partials/ativos?force=${force ? 1 : 0}&days=${period}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(r => r.json()).then(d => {
-                    const ativosList = d.ativos || [];
-                    let totalClientes = 0;
-                    let ativosReaisTotal = 0;
-                    let testesAtivosTotal = 0;
-                    let novosClientesTotal = 0;
-                    ativosList.forEach(a => {
-                        totalClientes += (a.total_clientes || 0);
-                        ativosReaisTotal += (a.ativos_reais || 0);
-                        testesAtivosTotal += (a.testes_ativos || 0);
-                        novosClientesTotal += (a.novos_clientes || 0);
-                    });
-                    document.getElementById('kpi-total-clientes').innerText = totalClientes.toLocaleString();
-                    document.getElementById('kpi-ativos-reais').innerText = ativosReaisTotal.toLocaleString();
-                    document.getElementById('kpi-testes-ativos').innerText = testesAtivosTotal.toLocaleString();
-                    document.getElementById('kpi-novos-clientes').innerText = novosClientesTotal.toLocaleString();
-                    ativosList.forEach(a => {
-                        baseRows[a.name] = baseRows[a.name] || {
-                            revenda: a.name,
-                            ativos_reais: 0,
-                            vendas: 0,
-                            testes: 0,
-                            conversao: 0,
-                            ads_period: 0,
-                            cost_per_sale: 0
-                        };
-                        baseRows[a.name].ativos_reais = a.ativos_reais || 0;
-                    });
-                    renderTable(Object.values(baseRows));
-                }).catch(()=>{});
-
-                // 3) Logs (pode demorar; quando chegar, atualiza vendas/testes/conversões)
-                fetch(`/api/partials/logs?days=${period}&force=${force ? 1 : 0}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(r => r.json()).then(d => {
-                    d.ranking.forEach(row => {
-                        const name = row.revenda;
-                        baseRows[name] = baseRows[name] || {
-                            revenda: name,
-                            ativos_reais: 0,
-                            vendas: 0,
-                            testes: 0,
-                            conversao: 0,
-                            ads_period: 0,
-                            cost_per_sale: 0
-                        };
-                        baseRows[name].vendas = row.vendas || 0;
-                        baseRows[name].testes = row.testes || 0;
-                        baseRows[name].conversao = row.conversao || 0;
-                        const salesTotal = (row.vendas || 0);
-                        const adsPeriod = baseRows[name].ads_period || 0;
-                        baseRows[name].cost_per_sale = salesTotal > 0 ? +(adsPeriod / salesTotal).toFixed(2) : 0;
-                    });
-                    renderTable(Object.values(baseRows));
-                    document.getElementById('last-update').innerText = new Date().toLocaleString();
-                }).catch(()=>{});
-
-            } catch (error) {
-                console.error("Erro ao buscar dados:", error);
-                alert("Falha ao atualizar dados. Verifique a conexão com o servidor.");
-            } finally {
-                if (force) {
-                    overlay.classList.add('hidden');
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.classList.remove('opacity-70', 'cursor-not-allowed');
-                        btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Atualizar';
-                    }
-                }
-            }
-        }
-
-        function renderTable(data) {
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = '';
-            const decorated = (data || []).map((item, i) => ({ item, i }));
-            decorated.sort((a, b) => {
-                const aZero = ((a.item?.ativos_reais) || 0) <= 0 ? 1 : 0;
-                const bZero = ((b.item?.ativos_reais) || 0) <= 0 ? 1 : 0;
-                if (aZero !== bZero) return aZero - bZero;
-                return a.i - b.i;
-            });
-            data = decorated.map(x => x.item);
-            window._rankingData = data;
-            
-            data.forEach((item, idx) => {
-                const revenda = item.revenda || item.name || '--';
-                const ativos = item.ativos_reais || 0;
-                const vendas = item.vendas || 0;
-                const testes = item.testes || 0;
-                const conversao = item.conversao || 0;
-                const adsPeriod = item.ads_period || 0;
-                const cps = item.cost_per_sale || 0;
-                const cpt = item.testes ? +(adsPeriod / item.testes).toFixed(2) : 0;
-                const taxaTesteVenda = item.testes ? +((vendas / item.testes) * 100).toFixed(1) : 0;
-                const row = `
-                    <tr class="hover:bg-gray-50 transition cursor-pointer" onclick="openAdsModalByIndex(${idx})">
-                        <td class="px-4 py-4 font-medium text-left">${revenda}</td>
-                        <td class="px-4 py-4 font-bold text-blue-600">${ativos.toLocaleString()} ✅</td>
-                        <td class="px-4 py-4">R$ ${adsPeriod.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-                        <td class="px-4 py-4 font-bold text-green-600">${vendas} 💰</td>
-                        <td class="px-4 py-4 text-purple-600">${testes} 🧪</td>
-                        <td class="px-4 py-4 text-gray-700">${cps ? `R$ ${cps.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}` : '--'}</td>
-                        <td class="px-4 py-4 text-gray-700">${cpt ? `R$ ${cpt.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}` : '--'}</td>
-                        <td class="px-4 py-4 text-gray-700">${taxaTesteVenda}%</td>
-                        <td class="px-4 py-4">
-                            <div class="flex items-center justify-center gap-2">
-                                <span class="w-10 text-xs font-bold">${conversao}%</span>
-                                <div class="w-24 bg-gray-200 rounded-full h-1.5">
-                                    <div class="bg-blue-600 h-1.5 rounded-full" style="width: ${conversao}%"></div>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        }
-
-        function openAdsModalByIndex(idx) {
-            const item = window._rankingData[idx];
-            if (!item) return;
-            openAdsModal(item);
-        }
-
-        function closeAdsModal() {
-            const modal = document.getElementById('ads-modal');
-            modal.classList.add('hidden');
-            window._selectedRow = null;
-            window._adsWeekDays = [];
-        }
-
-        async function openAdsModal(item) {
-            window._selectedRow = item;
-            const modal = document.getElementById('ads-modal');
-            document.getElementById('ads-modal-title').innerText = item.revenda;
-            document.getElementById('ads-week-total').innerText = '--';
-            document.getElementById('ads-month-total').innerText = '--';
-            document.getElementById('ads-week-range').innerText = '--';
-            document.getElementById('ads-month-range').innerText = '--';
-
-            const sales = item.vendas || 0;
-            document.getElementById('ads-roi-sales').innerText = sales.toLocaleString();
-            document.getElementById('ads-roi-cps').innerText = '--';
-
-            modal.classList.remove('hidden');
-
-            const loading = document.getElementById('ads-week-loading');
-            loading.classList.remove('hidden');
-
-            try {
-                const token = authToken();
-                const resp = await fetch(`/api/ads/summary?revenda=${encodeURIComponent(item.revenda)}`, { headers: { 'Authorization': 'Bearer ' + token }});
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.detail || 'Falha ao carregar ADS');
-
-                window._adsWeekDays = data.week.days || [];
-
-                document.getElementById('ads-week-total').innerText = (data.week.total || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                document.getElementById('ads-month-total').innerText = (data.month.total || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                document.getElementById('ads-week-range').innerText = `${formatDateBR(data.week.start)} → ${formatDateBR(data.week.end)}`;
-                document.getElementById('ads-month-range').innerText = `${formatDateBR(data.month.start)} → ${formatDateBR(data.month.end)}`;
-
-                const cps = sales > 0 ? (data.week.total / sales) : null;
-                document.getElementById('ads-roi-cps').innerText = cps === null ? '--' : cps.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-                renderAdsWeekGrid(window._adsWeekDays);
-            } catch (e) {
-                alert('Erro ao carregar ADS desta revenda.');
-            } finally {
-                loading.classList.add('hidden');
-            }
-        }
-
-        function renderAdsWeekGrid(days) {
-            const grid = document.getElementById('ads-week-grid');
-            grid.innerHTML = '';
-
-            days.forEach((d, idx) => {
-                const inputId = `ads-day-${idx}`;
-                const row = `
-                    <div class="flex items-center justify-between gap-3 bg-gray-50 rounded-lg p-3">
-                        <div class="text-sm font-semibold text-gray-700">${formatDateBR(d.date)}</div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-gray-500">R$</span>
-                            <input id="${inputId}" type="number" step="0.01" min="0" value="${(d.amount || 0)}" class="w-32 bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        </div>
-                    </div>
-                `;
-                grid.insertAdjacentHTML('beforeend', row);
-            });
-        }
-
-        async function saveAdsWeek() {
-            const item = window._selectedRow;
-            if (!item) return;
-
-            const btn = document.getElementById('ads-save-btn');
-            btn.disabled = true;
-            btn.classList.add('opacity-70', 'cursor-not-allowed');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Salvando...';
-
-            try {
-                const entries = window._adsWeekDays.map((d, idx) => {
-                    const v = parseFloat(document.getElementById(`ads-day-${idx}`).value || '0');
-                    return {date: d.date, amount: isNaN(v) ? 0 : v};
-                });
-
-                const token = authToken();
-                const resp = await fetch('/api/ads/entries', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-                    body: JSON.stringify({revenda: item.revenda, entries})
-                });
-
-                if (!resp.ok) throw new Error('save failed');
-
-                await openAdsModal(item);
-                await updateData(false);
-            } catch (e) {
-                alert('Erro ao salvar ADS.');
-            } finally {
-                btn.disabled = false;
-                btn.classList.remove('opacity-70', 'cursor-not-allowed');
-                btn.innerHTML = 'Salvar semana';
-            }
-        }
-
-        async function ingestTxt(save) {
-            const txt = document.getElementById('ads-ingest-text').value || '';
-            const d = document.getElementById('ads-ingest-date').value;
-            const preview = document.getElementById('ads-ingest-preview');
-            preview.innerHTML = '';
-            if (!txt.trim() || !d) {
-                alert('Informe a data e cole o TXT.');
-                return;
-            }
-            try {
-                const token = authToken();
-                const resp = await fetch('/api/ads/ingest-txt', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-                    body: JSON.stringify({date: d, content: txt, save: !!save})
-                });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.detail || 'Falha ao processar TXT');
-                let html = '<div class="text-gray-700"><div class="font-semibold mb-1">Itens processados:</div><ul class="list-disc ml-5">';
-                (data.parsed || []).forEach(it => {
-                    html += `<li>${it.revenda} — ${formatDateBR(it.date)} — R$ ${it.amount.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</li>`;
-                });
-                html += '</ul></div>';
-                preview.innerHTML = html;
-                if (save) {
-                    // Recarrega modal da revenda selecionada, se existir
-                    if (window._selectedRow) {
-                        await openAdsModal(window._selectedRow);
-                    }
-                    await updateData(false);
-                }
-            } catch (e) {
-                alert('Erro ao importar TXT.');
-            }
-        }
-
-        async function ingestJsonFile() {
-            const input = document.getElementById('ads-json-file');
-            const preview = document.getElementById('ads-json-preview');
-            preview.innerHTML = '';
-            if (!input.files || input.files.length === 0) {
-                alert('Escolha um arquivo JSON.');
-                return;
-            }
-            const file = input.files[0];
-            try {
-                const text = await file.text();
-                let payload = JSON.parse(text);
-                if (!Array.isArray(payload)) {
-                    alert('O JSON deve ser um array de objetos.');
-                    return;
-                }
-                const token = authToken();
-                const resp = await fetch('/api/ads/bulk-entries', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify(payload)
-                });
-                const data = await resp.json();
-                if (!resp.ok) {
-                    throw new Error(data.detail || 'Falha ao enviar o JSON');
-                }
-                preview.innerHTML = `<div class="text-green-700">Importado com sucesso. Registros atualizados: <b>${data.updated}</b> | Revendas: <b>${data.revendas}</b></div>`;
-                // Se estiver com uma revenda aberta, recarrega o modal
-                if (window._selectedRow) {
-                    await openAdsModal(window._selectedRow);
-                }
-                await updateData(false);
-            } catch (e) {
-                preview.innerHTML = `<div class="text-red-700">Erro ao processar JSON: ${e.message || e}</div>`;
-            }
-        }
-
-        // Initial load
-        (async () => {
-            await initAuthBadge();
-            if (!authToken()) { showLogin(); return; }
-            updateData(false);
-        })();
+        window._rankingData = []; window._selectedRow = null; window._adsWeekDays = []; window._expandedIndex = null; window._baseRows = {}; window._detailCache = {};
+        function applyTheme(theme) { const root = document.documentElement; root.setAttribute('data-theme', theme); localStorage.setItem('dash_theme', theme); const isDark = theme === 'dark'; document.getElementById('theme-toggle-label').innerText = isDark ? 'Claro' : 'Escuro'; document.querySelector('#theme-toggle i').className = isDark ? 'fas fa-sun mr-2' : 'fas fa-moon mr-2'; }
+        function toggleTheme() { const current = document.documentElement.getAttribute('data-theme') || 'light'; applyTheme(current === 'dark' ? 'light' : 'dark'); }
+        function bootTheme() { applyTheme(localStorage.getItem('dash_theme') || 'light'); }
+        function setStatus(kind, state, text) { const el = document.getElementById(`status-${kind}`); if (!el) return; el.classList.remove('done','loading','error'); if (state) el.classList.add(state); el.innerHTML = `<span class="status-dot"></span><span>${text}</span>`; }
+        function getPeriodValue() { return document.getElementById('period-select').value; }
+        function periodQueryString() { const p = getPeriodValue(); if (p === 'today' || p === 'yesterday') return `period=${encodeURIComponent(p)}`; return `days=${encodeURIComponent(p)}`; }
+        function formatDateBR(value) { const s = (value || '').toString().trim(); if (!s) return s; const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`; return s; }
+        function money(v) { const n = Number(v || 0); return `R$ ${n.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}`; }
+        function pct(v) { const n = Number(v || 0); return `${n.toLocaleString(undefined,{minimumFractionDigits:1, maximumFractionDigits:1})}%`; }
+        function authToken() { return localStorage.getItem('dash_token') || ''; }
+        function setAuthToken(token) { if (token) localStorage.setItem('dash_token', token); else localStorage.removeItem('dash_token'); }
+        function showLogin() { document.getElementById('login-overlay').classList.remove('hidden'); document.getElementById('login-error').classList.add('hidden'); document.getElementById('login-username').value = ''; document.getElementById('login-password').value = ''; }
+        function hideLogin() { document.getElementById('login-overlay').classList.add('hidden'); }
+        async function doLogin() { const btn = document.getElementById('login-btn'); const u = document.getElementById('login-username').value.trim(); const p = document.getElementById('login-password').value.trim(); const err = document.getElementById('login-error'); err.classList.add('hidden'); btn.disabled = true; btn.classList.add('opacity-70'); btn.innerText = 'Entrando...'; try { const resp = await fetch('/auth/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: u, password: p}) }); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'falha'); setAuthToken(data.token); hideLogin(); await initAuthBadge(); await updateData(true); } catch (e) { err.innerText = 'Usuário ou senha inválidos'; err.classList.remove('hidden'); } finally { btn.disabled = false; btn.classList.remove('opacity-70'); btn.innerText = 'Entrar'; } }
+        async function initAuthBadge() { const tok = authToken(); if (!tok) { document.getElementById('user-badge').classList.add('hidden'); document.getElementById('logout-btn').classList.add('hidden'); document.getElementById('users-btn').classList.add('hidden'); return; } try { const resp = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + tok }}); const data = await resp.json(); if (!resp.ok) throw new Error(); window._authMe = data; const badge = document.getElementById('user-badge'); badge.innerText = `${data.username} (${data.role}${data.revenda && data.revenda!=='*' ? ' · ' + data.revenda : ''})`; badge.classList.remove('hidden'); document.getElementById('logout-btn').classList.remove('hidden'); if (data.role === 'admin') document.getElementById('users-btn').classList.remove('hidden'); else document.getElementById('users-btn').classList.add('hidden'); } catch { setAuthToken(''); showLogin(); } }
+        function doLogout() { setAuthToken(''); showLogin(); }
+        function openUsersModal() { const tok = authToken(); if (!tok) { showLogin(); return; } const me = window._authMe || {}; if (me.role !== 'admin') return; document.getElementById('users-error').classList.add('hidden'); document.getElementById('users-overlay').classList.remove('hidden'); loadUsers(); }
+        function closeUsersModal() { document.getElementById('users-overlay').classList.add('hidden'); }
+        async function loadUsers() { const tok = authToken(); const tbody = document.getElementById('users-table-body'); tbody.innerHTML = ''; const resp = await fetch('/auth/users', { headers: { 'Authorization': 'Bearer ' + tok }}); const data = await resp.json(); if (!resp.ok) { document.getElementById('users-error').innerText = data.detail || 'Erro ao listar usuários'; document.getElementById('users-error').classList.remove('hidden'); return; } (data.users || []).forEach(u => { const tr = document.createElement('tr'); tr.innerHTML = `<td class="px-3 py-2">${u.username || ''}</td><td class="px-3 py-2">${u.role || ''}</td><td class="px-3 py-2">${u.revenda || ''}</td>`; tbody.appendChild(tr); }); }
+        async function createUser() { const tok = authToken(); const err = document.getElementById('users-error'); err.classList.add('hidden'); const btn = document.getElementById('create-user-btn'); btn.disabled = true; btn.classList.add('opacity-70'); try { const username = document.getElementById('new-user-username').value.trim(); const password = document.getElementById('new-user-password').value.trim(); const role = document.getElementById('new-user-role').value; const revenda = document.getElementById('new-user-revenda').value.trim(); const resp = await fetch('/auth/users', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }, body: JSON.stringify({ username, password, role, revenda }) }); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Erro ao criar usuário'); document.getElementById('new-user-username').value = ''; document.getElementById('new-user-password').value = ''; document.getElementById('new-user-revenda').value = ''; await loadUsers(); } catch (e) { err.innerText = e.message || 'Erro ao criar usuário'; err.classList.remove('hidden'); } finally { btn.disabled = false; btn.classList.remove('opacity-70'); } }
+        function openGlobalAdsModal() { document.getElementById('ads-global-modal').classList.remove('hidden'); document.getElementById('ads-global-preview').innerHTML=''; document.getElementById('ads-global-json-preview').innerHTML=''; }
+        function closeGlobalAdsModal() { document.getElementById('ads-global-modal').classList.add('hidden'); }
+        async function ingestGlobalTxt(save) { const txt = document.getElementById('ads-global-text').value || ''; const d = document.getElementById('ads-global-date').value; const preview = document.getElementById('ads-global-preview'); preview.innerHTML = ''; if (!txt.trim() || !d) { alert('Informe a data e cole o TXT.'); return; } try { const token = authToken(); const resp = await fetch('/api/ads/ingest-txt', { method: 'POST', headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token}, body: JSON.stringify({date: d, content: txt, save: !!save}) }); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Falha ao processar TXT'); let html = '<div class="text-success"><div class="font-semibold mb-1">Itens processados:</div><ul class="list-disc ml-5">'; (data.parsed || []).forEach(it => { html += `<li>${it.revenda} — ${it.date} — ${money(it.amount)}</li>`; }); html += '</ul></div>'; preview.innerHTML = html; if (save) await updateData(true); } catch (e) { preview.innerHTML = `<div class="text-danger">Erro ao importar TXT: ${e.message || e}</div>`; } }
+        async function ingestGlobalJsonFile() { const input = document.getElementById('ads-global-json-file'); const preview = document.getElementById('ads-global-json-preview'); preview.innerHTML = ''; if (!input.files || input.files.length === 0) { alert('Escolha um arquivo JSON.'); return; } const file = input.files[0]; try { const text = await file.text(); let payload = JSON.parse(text); if (!Array.isArray(payload)) { alert('O JSON deve ser um array de objetos.'); return; } const token = authToken(); const resp = await fetch('/api/ads/bulk-entries', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) }); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Falha ao enviar o JSON'); preview.innerHTML = `<div class="text-success">Importado com sucesso. Registros atualizados: <b>${data.updated}</b> | Revendas: <b>${data.revendas}</b></div>`; await updateData(true); } catch (e) { preview.innerHTML = `<div class="text-danger">Erro ao processar JSON: ${e.message || e}</div>`; } }
+        function initBaseRowsFromAds(adsData) { const baseRows = {}; (adsData.rows || []).forEach(r => { baseRows[r.revenda] = { revenda: r.revenda, ativos_reais: 0, vendas: 0, testes: 0, conversao: 0, ads_period: r.ads_period || 0, cost_per_sale: 0, total_clientes: 0, novos_clientes: 0, testes_ativos: 0 }; }); window._baseRows = baseRows; return baseRows; }
+        function applyAtivosToBaseRows(ativosList) { const baseRows = window._baseRows || {}; let totalClientes = 0, ativosReaisTotal = 0, testesAtivosTotal = 0, novosClientesTotal = 0; (ativosList || []).forEach(a => { totalClientes += (a.total_clientes || 0); ativosReaisTotal += (a.ativos_reais || 0); testesAtivosTotal += (a.testes_ativos || 0); novosClientesTotal += (a.novos_clientes || 0); baseRows[a.name] = baseRows[a.name] || { revenda: a.name, ativos_reais:0, vendas:0, testes:0, conversao:0, ads_period:0, cost_per_sale:0, total_clientes:0, novos_clientes:0, testes_ativos:0 }; baseRows[a.name].ativos_reais = a.ativos_reais || 0; baseRows[a.name].total_clientes = a.total_clientes || 0; baseRows[a.name].novos_clientes = a.novos_clientes || 0; baseRows[a.name].testes_ativos = a.testes_ativos || 0; }); document.getElementById('kpi-total-clientes').innerText = totalClientes.toLocaleString(); document.getElementById('kpi-ativos-reais').innerText = ativosReaisTotal.toLocaleString(); document.getElementById('kpi-testes-ativos').innerText = testesAtivosTotal.toLocaleString(); document.getElementById('kpi-novos-clientes').innerText = novosClientesTotal.toLocaleString(); window._baseRows = baseRows; }
+        function applyLogsToBaseRows(data) { const baseRows = window._baseRows || {}; (data.ranking || []).forEach(row => { const name = row.revenda; baseRows[name] = baseRows[name] || { revenda: name, ativos_reais:0, vendas:0, testes:0, conversao:0, ads_period:0, cost_per_sale:0, total_clientes:0, novos_clientes:0, testes_ativos:0 }; baseRows[name].vendas = row.vendas || 0; baseRows[name].testes = row.testes || 0; baseRows[name].conversao = row.conversao || 0; const salesTotal = (row.vendas || 0); const adsPeriod = baseRows[name].ads_period || 0; baseRows[name].cost_per_sale = salesTotal > 0 ? +(adsPeriod / salesTotal).toFixed(2) : 0; }); window._baseRows = baseRows; }
+        async function updateData(force) { const token = authToken(); if (!token) { showLogin(); return; } const qs = periodQueryString(); const overlay = document.getElementById('loading-overlay'); const btn = document.getElementById('refresh-btn'); setStatus('ads', 'loading', 'ADS carregando...'); setStatus('ativos', 'loading', 'Ativos carregando...'); setStatus('vendas', 'loading', 'Vendas carregando...'); setStatus('testes', 'loading', 'Testes carregando...'); renderSkeletons(); try { if (force) { overlay.classList.remove('hidden'); if (btn) { btn.disabled = true; btn.classList.add('opacity-70','cursor-not-allowed'); btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Atualizando...'; } } const adsResp = await fetch(`/api/ads/all?${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}); if (!adsResp.ok) throw new Error('Falha ao carregar ADS'); const adsData = await adsResp.json(); document.getElementById('ads-period-total').innerText = money(adsData.summary.ads_period || 0); document.getElementById('ads-period-range').innerText = `${formatDateBR(adsData.summary.period_start)} → ${formatDateBR(adsData.summary.period_end)}`; initBaseRowsFromAds(adsData); renderRows(Object.values(window._baseRows)); setStatus('ads', 'done', 'ADS carregado'); fetch(`/api/partials/ativos?force=${force ? 1 : 0}&${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Falha ao carregar ativos'); return d; }).then((d) => { applyAtivosToBaseRows(d.ativos || []); renderRows(Object.values(window._baseRows)); setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`); }).catch((e) => { console.error(e); setStatus('ativos', 'error', 'Erro ao carregar ativos'); }); fetch(`/api/partials/logs?force=${force ? 1 : 0}&${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Falha ao carregar logs'); return d; }).then((d) => { applyLogsToBaseRows(d); renderRows(Object.values(window._baseRows)); setStatus('vendas', 'done', 'Vendas carregadas'); setStatus('testes', 'done', 'Testes carregados'); document.getElementById('last-update').innerText = new Date().toLocaleString(); }).catch((e) => { console.error(e); setStatus('vendas', 'error', 'Erro ao carregar vendas'); setStatus('testes', 'error', 'Erro ao carregar testes'); }); } catch (error) { console.error('Erro ao buscar dados:', error); alert('Falha ao atualizar dados. Verifique a conexão com o servidor.'); setStatus('ads', 'error', 'Erro ao carregar ADS'); } finally { if (force) { overlay.classList.add('hidden'); if (btn) { btn.disabled = false; btn.classList.remove('opacity-70','cursor-not-allowed'); btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Atualizar'; } } } }
+        function renderSkeletons() { const tbody = document.getElementById('table-body'); const mobile = document.getElementById('mobile-cards-wrap'); tbody.innerHTML = ''; mobile.innerHTML = ''; for (let i=0;i<4;i++) { tbody.innerHTML += `<tr class="pretty-row"><td colspan="7"><div class="skeleton h-16 w-full"></div></td></tr>`; mobile.innerHTML += `<div class="soft-card p-4"><div class="skeleton h-28 w-full"></div></div>`; } }
+        function sortRows(data) { const arr = [...(data || [])]; arr.sort((a,b) => { const av = Number(a.vendas || 0), bv = Number(b.vendas || 0); if (bv !== av) return bv - av; return Number(b.ativos_reais || 0) - Number(a.ativos_reais || 0); }); return arr; }
+        function getRowInsights(item) { const vendas = Number(item.vendas || 0), testes = Number(item.testes || 0), ads = Number(item.ads_period || 0); const cpa = vendas > 0 ? ads / vendas : 0; let badge = { text:'Em observação', cls:'muted' }; if (vendas >= 8 && cpa > 0 && cpa <= 5) badge = { text:'Ótimo desempenho', cls:'text-success' }; else if (ads > 0 && vendas === 0) badge = { text:'ADS sem vendas', cls:'text-danger' }; else if (testes >= 10 && vendas <= 2) badge = { text:'Baixa conversão', cls:'text-warning' }; return badge; }
+        function renderRows(data) { const sorted = sortRows(data); window._rankingData = sorted; renderDesktopRows(sorted); renderMobileRows(sorted); }
+        function renderDesktopRows(data) { const tbody = document.getElementById('table-body'); tbody.innerHTML = ''; data.forEach((item, idx) => { const insight = getRowInsights(item); const conv = Math.max(0, Math.min(100, Number(item.conversao || 0))); const rowClass = window._expandedIndex === idx ? 'expand-open' : ''; tbody.insertAdjacentHTML('beforeend', `<tr class="pretty-row ${rowClass}" onclick="openInlineDetails(${idx}, true)"><td><div class="flex items-center gap-3"><i class="fas fa-chevron-right expand-arrow"></i><div><div class="font-extrabold text-main">${item.revenda || item.name || '--'}</div><div class="text-xs ${insight.cls} font-semibold">${insight.text}</div></div></div></td><td class="text-center font-extrabold text-primary">${Number(item.ativos_reais || 0).toLocaleString()}</td><td class="text-center font-semibold">${money(item.ads_period || 0)}</td><td class="text-center font-extrabold text-success">${Number(item.vendas || 0).toLocaleString()}</td><td class="text-center font-semibold">${Number(item.testes || 0).toLocaleString()}</td><td class="text-center font-semibold">${item.cost_per_sale ? money(item.cost_per_sale) : '--'}</td><td><div class="flex items-center gap-3 justify-end"><span class="text-xs font-extrabold w-12 text-right">${pct(conv)}</span><div class="progress max-w-[130px]"><span style="width:${conv}%"></span></div></div></td></tr><tr id="expand-row-${idx}" class="expand-row ${window._expandedIndex === idx ? '' : 'expand-hidden'}"><td colspan="7"><div class="expand-panel" id="expand-panel-${idx}">${renderInlineDetailsContent(item, idx)}</div></td></tr>`); }); }
+        function renderMobileRows(data) { const wrap = document.getElementById('mobile-cards-wrap'); wrap.innerHTML = ''; data.forEach((item, idx) => { const insight = getRowInsights(item); const conv = Math.max(0, Math.min(100, Number(item.conversao || 0))); const open = window._expandedIndex === idx; wrap.insertAdjacentHTML('beforeend', `<div class="glass-card p-4 ${open ? 'expand-open' : ''}"><button class="w-full text-left" onclick="openInlineDetails(${idx}, true)"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><div class="flex items-center gap-2"><i class="fas fa-chevron-right expand-arrow text-xs"></i><div class="font-extrabold text-main truncate">${item.revenda || item.name || '--'}</div></div><div class="text-xs mt-1 ${insight.cls} font-semibold">${insight.text}</div></div><div class="pill">${money(item.ads_period || 0)}</div></div><div class="grid grid-cols-2 gap-3 mt-4"><div class="soft-card p-3"><div class="text-xs uppercase muted font-bold">Ativos</div><div class="text-lg font-extrabold text-primary mt-1">${Number(item.ativos_reais || 0).toLocaleString()}</div></div><div class="soft-card p-3"><div class="text-xs uppercase muted font-bold">Vendas</div><div class="text-lg font-extrabold text-success mt-1">${Number(item.vendas || 0).toLocaleString()}</div></div><div class="soft-card p-3"><div class="text-xs uppercase muted font-bold">Testes</div><div class="text-lg font-extrabold mt-1">${Number(item.testes || 0).toLocaleString()}</div></div><div class="soft-card p-3"><div class="text-xs uppercase muted font-bold">Conversão</div><div class="text-lg font-extrabold mt-1">${pct(conv)}</div></div></div></button><div id="mobile-expand-${idx}" class="${open ? 'mt-4' : 'hidden'}">${renderInlineDetailsContent(item, idx)}</div></div>`); }); }
+        function renderInlineDetailsContent(item, idx) { const details = window._detailCache?.[idx]; const loading = !details; const weekDays = details?.week?.days || []; const sales = Number(item.vendas || 0); const weekTotal = Number(details?.week?.total || 0); const monthTotal = Number(details?.month?.total || 0); const cps = sales > 0 ? weekTotal / sales : 0; const weekInputs = loading ? `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">${Array.from({length:6}).map(()=>`<div class="skeleton h-16 w-full"></div>`).join('')}</div>` : `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">${weekDays.map((d, i) => `<div class="soft-card p-3 flex items-center justify-between gap-3"><div><div class="font-bold text-main">${formatDateBR(d.date)}</div><div class="text-xs muted">Lançamento diário</div></div><div class="flex items-center gap-2"><span class="muted text-sm">R$</span><input id="ads-day-${idx}-${i}" type="number" step="0.01" min="0" value="${Number(d.amount || 0)}" class="soft-input w-28 px-3 py-2 text-sm" /></div></div>`).join('')}</div>`; return `<div class="space-y-4"><div class="grid grid-cols-1 lg:grid-cols-3 gap-3"><div class="soft-card p-4"><div class="text-xs uppercase font-extrabold muted">Semana (R$)</div><div class="text-3xl font-extrabold text-main mt-1">${money(weekTotal)}</div><div class="text-sm muted mt-1">${details ? `${formatDateBR(details.week.start)} → ${formatDateBR(details.week.end)}` : 'Carregando intervalo...'}</div></div><div class="soft-card p-4"><div class="text-xs uppercase font-extrabold muted">Mês (R$)</div><div class="text-3xl font-extrabold text-main mt-1">${money(monthTotal)}</div><div class="text-sm muted mt-1">${details ? `${formatDateBR(details.month.start)} → ${formatDateBR(details.month.end)}` : 'Carregando intervalo...'}</div></div><div class="soft-card p-4"><div class="text-xs uppercase font-extrabold muted">ROI (período)</div><div class="mt-3 space-y-2 text-sm"><div class="flex items-center justify-between"><span class="muted">Vendas</span><span class="font-bold text-main">${sales.toLocaleString()}</span></div><div class="flex items-center justify-between"><span class="muted">R$ / venda</span><span class="font-bold text-main">${sales > 0 ? money(cps) : '--'}</span></div></div></div></div><details class="soft-card overflow-hidden"><summary class="px-4 py-4 font-semibold cursor-pointer text-main flex items-center justify-between"><span><i class="fas fa-caret-right mr-2"></i> Importar TXT (colar)</span></summary><div class="p-4 border-t space-y-3" style="border-color:var(--border);"><div class="flex flex-col md:flex-row items-start md:items-center gap-3"><label class="text-sm muted">Data (YYYY-MM-DD)</label><input id="ads-ingest-date-${idx}" type="date" class="soft-input px-3 py-3 text-sm" /><button class="btn btn-primary px-4 py-3" onclick="event.stopPropagation(); ingestTxtInline(${idx}, true)">Lançar TXT</button><button class="btn btn-secondary px-4 py-3" onclick="event.stopPropagation(); ingestTxtInline(${idx}, false)">Pré-visualizar</button></div><textarea id="ads-ingest-text-${idx}" rows="5" class="soft-textarea w-full px-3 py-3 text-sm" placeholder="Cole aqui os blocos TXT desta revenda"></textarea><div id="ads-ingest-preview-${idx}" class="text-sm"></div></div></details><details class="soft-card overflow-hidden"><summary class="px-4 py-4 font-semibold cursor-pointer text-main flex items-center justify-between"><span><i class="fas fa-caret-right mr-2"></i> Importar JSON (arquivo)</span></summary><div class="p-4 border-t space-y-3" style="border-color:var(--border);"><div class="flex flex-col md:flex-row items-start md:items-center gap-3"><input id="ads-json-file-${idx}" type="file" accept="application/json" class="block text-sm muted" /><button class="btn btn-primary px-4 py-3" onclick="event.stopPropagation(); ingestJsonFileInline(${idx})">Enviar JSON</button></div><div class="text-xs muted">Formato esperado: lista de objetos { "revenda": "...", "entries": [ { "date": "YYYY-MM-DD", "amount": 123.45 } ] }</div><div id="ads-json-preview-${idx}" class="text-sm"></div></div></details><div class="soft-card p-4 space-y-4"><div class="flex items-center justify-between gap-3 flex-wrap"><div><div class="font-extrabold text-main">Semana</div><div class="text-sm muted">Ajuste os valores diários da revenda</div></div><button class="btn btn-primary px-4 py-3" onclick="event.stopPropagation(); saveInlineAdsWeek(${idx})"><i class="fas fa-save mr-2"></i> Salvar semana</button></div>${weekInputs}</div></div>`; }
+        async function openInlineDetails(idx, scrollTo) { if (window._expandedIndex === idx) { window._expandedIndex = null; renderRows(window._rankingData); return; } window._expandedIndex = idx; renderRows(window._rankingData); if (!window._detailCache[idx]) await fetchAdsSummaryForIndex(idx); renderRows(window._rankingData); if (scrollTo) { const target = document.getElementById(`expand-panel-${idx}`) || document.getElementById(`mobile-expand-${idx}`); if (target) target.scrollIntoView({ behavior:'smooth', block:'nearest' }); } }
+        async function fetchAdsSummaryForIndex(idx) { const item = window._rankingData[idx]; if (!item) return; const token = authToken(); try { const resp = await fetch(`/api/ads/summary?revenda=${encodeURIComponent(item.revenda)}`, { headers: { 'Authorization': 'Bearer ' + token }}); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Falha ao carregar ADS'); window._detailCache[idx] = data; } catch (e) { console.error(e); alert('Erro ao carregar ADS desta revenda.'); } }
+        async function saveInlineAdsWeek(idx) { const item = window._rankingData[idx]; const details = window._detailCache?.[idx]; if (!item || !details) return; const buttons = document.querySelectorAll(`[onclick*="saveInlineAdsWeek(${idx})"]`); buttons.forEach(btn => { btn.disabled = true; btn.classList.add('opacity-70'); btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Salvando...'; }); try { const entries = (details.week.days || []).map((d, i) => { const input = document.getElementById(`ads-day-${idx}-${i}`); const v = parseFloat(input?.value || '0'); return { date: d.date, amount: isNaN(v) ? 0 : v }; }); const token = authToken(); const resp = await fetch('/api/ads/entries', { method: 'POST', headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token}, body: JSON.stringify({ revenda: item.revenda, entries }) }); const data = await resp.json().catch(()=>({})); if (!resp.ok) throw new Error(data.detail || 'Erro ao salvar ADS'); delete window._detailCache[idx]; await fetchAdsSummaryForIndex(idx); await updateData(false); } catch (e) { alert(e.message || 'Erro ao salvar ADS.'); } finally { buttons.forEach(btn => { btn.disabled = false; btn.classList.remove('opacity-70'); btn.innerHTML = '<i class="fas fa-save mr-2"></i> Salvar semana'; }); } }
+        async function ingestTxtInline(idx, save) { const txt = document.getElementById(`ads-ingest-text-${idx}`)?.value || ''; const d = document.getElementById(`ads-ingest-date-${idx}`)?.value; const preview = document.getElementById(`ads-ingest-preview-${idx}`); preview.innerHTML = ''; if (!txt.trim() || !d) { alert('Informe a data e cole o TXT.'); return; } try { const token = authToken(); const resp = await fetch('/api/ads/ingest-txt', { method: 'POST', headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token}, body: JSON.stringify({date: d, content: txt, save: !!save}) }); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Falha ao processar TXT'); let html = '<div class="text-success"><div class="font-semibold mb-1">Itens processados:</div><ul class="list-disc ml-5">'; (data.parsed || []).forEach(it => { html += `<li>${it.revenda} — ${formatDateBR(it.date)} — ${money(it.amount)}</li>`; }); html += '</ul></div>'; preview.innerHTML = html; if (save) { delete window._detailCache[idx]; await fetchAdsSummaryForIndex(idx); await updateData(false); } } catch (e) { preview.innerHTML = `<div class="text-danger">Erro ao importar TXT: ${e.message || e}</div>`; } }
+        async function ingestJsonFileInline(idx) { const input = document.getElementById(`ads-json-file-${idx}`); const preview = document.getElementById(`ads-json-preview-${idx}`); preview.innerHTML = ''; if (!input.files || input.files.length === 0) { alert('Escolha um arquivo JSON.'); return; } const file = input.files[0]; try { const text = await file.text(); let payload = JSON.parse(text); if (!Array.isArray(payload)) { alert('O JSON deve ser um array de objetos.'); return; } const token = authToken(); const resp = await fetch('/api/ads/bulk-entries', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) }); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Falha ao enviar o JSON'); preview.innerHTML = `<div class="text-success">Importado com sucesso. Registros atualizados: <b>${data.updated}</b> | Revendas: <b>${data.revendas}</b></div>`; delete window._detailCache[idx]; await fetchAdsSummaryForIndex(idx); await updateData(false); } catch (e) { preview.innerHTML = `<div class="text-danger">Erro ao processar JSON: ${e.message || e}</div>`; } }
+        (async () => { bootTheme(); await initAuthBadge(); if (!authToken()) { showLogin(); return; } updateData(false); })();
     </script>
 </body>
 </html>
