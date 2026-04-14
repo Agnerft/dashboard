@@ -367,11 +367,20 @@ def _auth_scope_from_request(request: Request) -> dict:
     return payload
 
 
-def _apply_scope_to_ativos(data, user_role: str, user_rev: str):
+def _user_can_see(user_role: str, user_rev, revenda_name: str) -> bool:
+    """Verifica se o usuário tem acesso a uma determinada revenda."""
+    if user_role == "admin" or user_rev == "*" or not user_rev:
+        return True
+    if isinstance(user_rev, list):
+        return revenda_name in user_rev
+    return revenda_name == user_rev
+
+
+def _apply_scope_to_ativos(data, user_role: str, user_rev):
     if not isinstance(data, list):
         return []
     if user_role != "admin" and user_rev and user_rev != "*":
-        return [a for a in data if a.get("name") == user_rev]
+        return [a for a in data if _user_can_see(user_role, user_rev, a.get("name", ""))]
     return data
 
 
@@ -545,7 +554,7 @@ def get_data(days: int = 7, period: str | None = None, force: int = 0, request: 
         data = _CACHE[cache_key]["data"].copy()
         data["meta"] = {"source": "memory", "refreshing": False, "ts": _CACHE[cache_key]["ts"]}
         if user_role != "admin" and user_rev and isinstance(data.get("charts", {}).get("ranking"), list):
-            rows = [r for r in data["charts"]["ranking"] if r.get("revenda") == user_rev]
+            rows = [r for r in data["charts"]["ranking"] if _user_can_see(user_role, user_rev, r.get("revenda", ""))]
             data["charts"]["ranking"] = rows
             s = {"total_clientes": 0, "ativos_reais": 0, "testes_ativos": 0, "novos_clientes": 0, "vendas": 0}
             for r in rows:
@@ -586,12 +595,9 @@ def get_data(days: int = 7, period: str | None = None, force: int = 0, request: 
     data["meta"] = {"source": "fresh", "refreshing": False, "ts": _CACHE[cache_key]["ts"]}
 
     if user_role != "admin" and user_rev and isinstance(data.get("charts", {}).get("ranking"), list):
-        rows = [r for r in data["charts"]["ranking"] if r.get("revenda") == user_rev]
+        rows = [r for r in data["charts"]["ranking"] if _user_can_see(user_role, user_rev, r.get("revenda", ""))]
         data["charts"]["ranking"] = rows
-        s = {"vendas": 0}
-        for r in rows:
-            s["vendas"] += int(r.get("vendas", 0) or 0)
-        data["summary"]["vendas"] = s["vendas"]
+        data["summary"]["vendas"] = sum(int(r.get("vendas", 0) or 0) for r in rows)
 
     return data
 
@@ -768,7 +774,7 @@ def get_ads_all(days: int = 7, period: str | None = None, request: Request = Non
 
     names = sorted(REVENDEDORES_IDS.keys())
     if user_role != "admin" and user_rev and user_rev != "*":
-        names = [n for n in names if n == user_rev]
+        names = [n for n in names if _user_can_see(user_role, user_rev, n)]
 
     rows = []
     ads_period_total = 0.0
@@ -866,7 +872,7 @@ def partial_logs(days: int = 7, period: str | None = None, force: int = 0, reque
         data = _CACHE[key]["data"]
         ranking = data.get("ranking", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
         if user_role != "admin" and user_rev and user_rev != "*":
-            ranking = [r for r in ranking if r.get("revenda") == user_rev]
+            ranking = [r for r in ranking if _user_can_see(user_role, user_rev, r.get("revenda", ""))]
         return {"ranking": ranking, "discovered_ids": {}, "source": "memory"}
 
     if not force and key in cache:
@@ -892,7 +898,7 @@ def partial_logs(days: int = 7, period: str | None = None, force: int = 0, reque
         data = entry.get("data") if isinstance(entry, dict) else entry
         ranking = data.get("ranking", []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
         if user_role != "admin" and user_rev and user_rev != "*":
-            ranking = [r for r in ranking if r.get("revenda") == user_rev]
+            ranking = [r for r in ranking if _user_can_see(user_role, user_rev, r.get("revenda", ""))]
         return {"ranking": ranking, "discovered_ids": {}, "source": "disk"}
 
     from dashboard_data import REVENDEDORES_IDS
@@ -903,7 +909,7 @@ def partial_logs(days: int = 7, period: str | None = None, force: int = 0, reque
     _save_data_cache(cache)
 
     if user_role != "admin" and user_rev and user_rev != "*":
-        payload["ranking"] = [r for r in payload["ranking"] if r.get("revenda") == user_rev]
+        payload["ranking"] = [r for r in payload["ranking"] if _user_can_see(user_role, user_rev, r.get("revenda", ""))]
     payload["source"] = "fresh"
     return payload
 
@@ -1148,7 +1154,7 @@ def ingest_ads_txt(payload: AdsIngestTxt, request: Request):
         })
 
     if user_role != "admin" and user_rev and user_rev != "*":
-        parsed = [it for it in parsed if it.get("revenda") == user_rev]
+        parsed = [it for it in parsed if _user_can_see(user_role, user_rev, it.get("revenda", ""))]
         if payload.save and not parsed:
             raise HTTPException(status_code=403, detail="forbidden")
 

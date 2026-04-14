@@ -4530,13 +4530,13 @@
     }
   },
   "ativos:7:2026-04-08:2026-04-14": {
-    "ts": 1776176026.2590132,
+    "ts": 1776178109.2256725,
     "data": [
       {
         "name": "REVENDA GABRIEL",
-        "total_clientes": 18409,
-        "ativos_reais": 3791,
-        "testes_ativos": 3,
+        "total_clientes": 18411,
+        "ativos_reais": 3790,
+        "testes_ativos": 5,
         "novos_clientes": 5296
       },
       {
@@ -4555,30 +4555,30 @@
       },
       {
         "name": "REVENDA EMERSON",
-        "total_clientes": 2409,
-        "ativos_reais": 739,
+        "total_clientes": 2410,
+        "ativos_reais": 741,
         "testes_ativos": 1,
-        "novos_clientes": 1164
+        "novos_clientes": 1165
       },
       {
         "name": "REVENDA JOAO",
-        "total_clientes": 1876,
+        "total_clientes": 1877,
         "ativos_reais": 683,
-        "testes_ativos": 0,
+        "testes_ativos": 1,
         "novos_clientes": 1001
       },
       {
         "name": "REVENDA ROBSON",
-        "total_clientes": 2038,
-        "ativos_reais": 671,
-        "testes_ativos": 0,
+        "total_clientes": 2039,
+        "ativos_reais": 670,
+        "testes_ativos": 1,
         "novos_clientes": 976
       },
       {
         "name": "ADS - GUILHERME",
         "total_clientes": 2030,
         "ativos_reais": 586,
-        "testes_ativos": 1,
+        "testes_ativos": 0,
         "novos_clientes": 766
       },
       {
@@ -4597,30 +4597,30 @@
       },
       {
         "name": "ADS - MATEUS",
-        "total_clientes": 1328,
-        "ativos_reais": 518,
-        "testes_ativos": 0,
-        "novos_clientes": 801
+        "total_clientes": 1334,
+        "ativos_reais": 519,
+        "testes_ativos": 5,
+        "novos_clientes": 802
       },
       {
         "name": "ADS - DAVID",
         "total_clientes": 3174,
-        "ativos_reais": 468,
+        "ativos_reais": 469,
         "testes_ativos": 0,
-        "novos_clientes": 615
+        "novos_clientes": 616
       },
       {
         "name": "ADS - LUCAS",
-        "total_clientes": 1850,
+        "total_clientes": 1851,
         "ativos_reais": 456,
-        "testes_ativos": 0,
+        "testes_ativos": 1,
         "novos_clientes": 600
       },
       {
         "name": "ADS - WILLIAM",
-        "total_clientes": 1850,
+        "total_clientes": 1851,
         "ativos_reais": 433,
-        "testes_ativos": 0,
+        "testes_ativos": 1,
         "novos_clientes": 594
       },
       {
@@ -4646,9 +4646,9 @@
       },
       {
         "name": "ADS - KRONE",
-        "total_clientes": 1524,
+        "total_clientes": 1525,
         "ativos_reais": 383,
-        "testes_ativos": 0,
+        "testes_ativos": 1,
         "novos_clientes": 520
       },
       {
@@ -4668,7 +4668,7 @@
       {
         "name": "REVENDA JACSON",
         "total_clientes": 430,
-        "ativos_reais": 291,
+        "ativos_reais": 289,
         "testes_ativos": 0,
         "novos_clientes": 414
       },

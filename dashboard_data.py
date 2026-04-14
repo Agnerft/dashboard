@@ -26,7 +26,7 @@ RESELLER_MAP = {
     "jaqueline": "ADS - JAQUELINE",
     "Jonathan01": "ADS - JONATHAN",
     "tdstheflash": "REVENDA JULIO",
-    "Junior": "ADS - JUNIOR",
+    "Junior": "ADS - EVERALDO",
     "kaio01": "ADS - KAIO",
     "LucasLoko": "ADS - JOAO LUCAS",
     "luispaulo": "ADS - PAULO",
@@ -70,7 +70,7 @@ REVENDEDORES_IDS = {
     "REVENDA ROGERIO": 3499,
     "REVENDA JACQUES": 3230,
     "REVENDA JULIO": 3472,
-    "ADS - JUNIOR": 2580,
+    "ADS - EVERALDO": 2580,
     "ADS - MICHELI": 3517,
     "ADS - WILLIAM": 3519,
     "ADS - GUILHERME": 3523,
@@ -79,9 +79,9 @@ REVENDEDORES_IDS = {
     "ADS - BRUNO": 3721,
     "ADS - DAVID": 3558,
     "ADS - LUCAS": 3521,
-    "ADS - DOUGLAS SANDI": 3368,
-    "ADS - MATEUS": 2815,
-    "ADS - KRONE": 3481,
+    # "ADS - DOUGLAS SANDI": 3368,
+    # "ADS - MATEUS": 2815,
+    # "ADS - KRONE": 3481,
 }
 
 BLACKLISTED_USER_IDS = {3566, 2850, 2123, 2861}
