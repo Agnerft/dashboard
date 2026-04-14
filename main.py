@@ -503,23 +503,29 @@ def auth_create_user(body: dict, request: Request):
 @app.delete("/auth/users/{username}")
 def delete_user(username: str, request: Request):
     """Admin: deleta um usuário cadastrado."""
-    scope = _auth_scope_from_request(request)
-    if scope.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Apenas admins podem deletar usuários.")
-    
-    if username == scope.get("username"):
-        raise HTTPException(status_code=400, detail="Você não pode deletar a si mesmo.")
-    
-    with _USERS_LOCK:
-        users = _load_users()
-        user_index = next((i for i, u in enumerate(users) if u.get("username") == username), None)
-        if user_index is None:
-            raise HTTPException(status_code=404, detail=f"Usuário '{username}' não encontrado.")
+    try:
+        scope = _auth_scope_from_request(request)
+        if scope.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Apenas admins podem deletar usuários.")
         
-        del users[user_index]
-        _save_users(users)
-    
-    return {"status": "ok", "deleted": username}
+        if username == scope.get("username"):
+            raise HTTPException(status_code=400, detail="Você não pode deletar a si mesmo.")
+        
+        with _USERS_LOCK:
+            users = _load_users()
+            user_index = next((i for i, u in enumerate(users) if u.get("username") == username), None)
+            if user_index is None:
+                raise HTTPException(status_code=404, detail=f"Usuário '{username}' não encontrado.")
+            
+            del users[user_index]
+            _save_users(users)
+        
+        return {"status": "ok", "deleted": username}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Erro ao deletar usuário {username}")
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 
 def _get_ads_canonical():

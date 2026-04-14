@@ -4314,24 +4314,24 @@
     }
   },
   "logs:7:2026-04-08:2026-04-14": {
-    "ts": 1776186475.840124,
+    "ts": 1776186982.6947615,
     "data": {
       "ranking": [
         {
           "revenda": "REVENDA GABRIEL",
           "vendas": 234,
           "conversoes": 0,
-          "testes": 958,
-          "renovacoes": 593,
-          "conversao": 24.4
+          "testes": 961,
+          "renovacoes": 596,
+          "conversao": 24.3
         },
         {
           "revenda": "ADS - EVERALDO",
           "vendas": 126,
           "conversoes": 0,
-          "testes": 452,
+          "testes": 453,
           "renovacoes": 321,
-          "conversao": 27.9
+          "conversao": 27.8
         },
         {
           "revenda": "ADS - GUILHERME",
@@ -4385,17 +4385,17 @@
           "revenda": "ADS - BRUNO",
           "vendas": 64,
           "conversoes": 0,
-          "testes": 393,
+          "testes": 394,
           "renovacoes": 19,
-          "conversao": 16.3
+          "conversao": 16.2
         },
         {
           "revenda": "ADS - JOSE",
           "vendas": 56,
           "conversoes": 0,
-          "testes": 223,
+          "testes": 224,
           "renovacoes": 26,
-          "conversao": 25.1
+          "conversao": 25.0
         },
         {
           "revenda": "REVENDA HERON",
@@ -4418,7 +4418,7 @@
           "vendas": 13,
           "conversoes": 0,
           "testes": 103,
-          "renovacoes": 70,
+          "renovacoes": 72,
           "conversao": 12.6
         },
         {
@@ -4466,7 +4466,7 @@
           "vendas": 6,
           "conversoes": 0,
           "testes": 37,
-          "renovacoes": 146,
+          "renovacoes": 147,
           "conversao": 16.2
         },
         {
@@ -4482,12 +4482,12 @@
     }
   },
   "ativos:7:2026-04-08:2026-04-14": {
-    "ts": 1776186623.2243924,
+    "ts": 1776187266.8540957,
     "data": [
       {
         "name": "REVENDA GABRIEL",
-        "total_clientes": 18441,
-        "ativos_reais": 3786,
+        "total_clientes": 18442,
+        "ativos_reais": 3785,
         "testes_ativos": 16,
         "novos_clientes": 5299
       },
@@ -4495,7 +4495,7 @@
         "name": "ADS - EVERALDO",
         "total_clientes": 4906,
         "ativos_reais": 2194,
-        "testes_ativos": 5,
+        "testes_ativos": 4,
         "novos_clientes": 3060
       },
       {
@@ -4508,7 +4508,7 @@
       {
         "name": "REVENDA EMERSON",
         "total_clientes": 2412,
-        "ativos_reais": 742,
+        "ativos_reais": 743,
         "testes_ativos": 2,
         "novos_clientes": 1166
       },
@@ -4516,7 +4516,7 @@
         "name": "REVENDA JOAO",
         "total_clientes": 1881,
         "ativos_reais": 679,
-        "testes_ativos": 1,
+        "testes_ativos": 0,
         "novos_clientes": 1001
       },
       {
@@ -4537,7 +4537,7 @@
         "name": "REVENDA ERICK",
         "total_clientes": 1610,
         "ativos_reais": 523,
-        "testes_ativos": 3,
+        "testes_ativos": 2,
         "novos_clientes": 789
       },
       {
@@ -4556,9 +4556,9 @@
       },
       {
         "name": "ADS - WILLIAM",
-        "total_clientes": 1852,
+        "total_clientes": 1853,
         "ativos_reais": 432,
-        "testes_ativos": 0,
+        "testes_ativos": 1,
         "novos_clientes": 595
       },
       {
@@ -4569,18 +4569,18 @@
         "novos_clientes": 593
       },
       {
-        "name": "REVENDA HERON",
-        "total_clientes": 1542,
-        "ativos_reais": 426,
-        "testes_ativos": 1,
-        "novos_clientes": 679
-      },
-      {
         "name": "ADS - MICHELI",
         "total_clientes": 3054,
         "ativos_reais": 426,
         "testes_ativos": 0,
         "novos_clientes": 599
+      },
+      {
+        "name": "REVENDA HERON",
+        "total_clientes": 1542,
+        "ativos_reais": 425,
+        "testes_ativos": 1,
+        "novos_clientes": 679
       },
       {
         "name": "REVENDA JACQUES",
@@ -4591,9 +4591,9 @@
       },
       {
         "name": "ADS - BRUNO",
-        "total_clientes": 2172,
+        "total_clientes": 2173,
         "ativos_reais": 302,
-        "testes_ativos": 0,
+        "testes_ativos": 1,
         "novos_clientes": 339
       },
       {
@@ -4612,7 +4612,7 @@
       },
       {
         "name": "ADS - JOSE",
-        "total_clientes": 1227,
+        "total_clientes": 1228,
         "ativos_reais": 265,
         "testes_ativos": 2,
         "novos_clientes": 313
