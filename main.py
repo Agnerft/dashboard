@@ -500,14 +500,34 @@ def auth_create_user(body: dict, request: Request):
     return {"status": "ok"}
 
 
+@app.delete("/auth/users/{username}")
+def delete_user(username: str, request: Request):
+    """Admin: deleta um usuário cadastrado."""
+    scope = _auth_scope_from_request(request)
+    if scope.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Apenas admins podem deletar usuários.")
+    
+    if username == scope.get("username"):
+        raise HTTPException(status_code=400, detail="Você não pode deletar a si mesmo.")
+    
+    with _USERS_LOCK:
+        users = _load_users()
+        user_index = next((i for i, u in enumerate(users) if u.get("username") == username), None)
+        if user_index is None:
+            raise HTTPException(status_code=404, detail=f"Usuário '{username}' não encontrado.")
+        
+        del users[user_index]
+        _save_users(users)
+    
+    return {"status": "ok", "deleted": username}
+
+
 def _get_ads_canonical():
     from dashboard_data import REVENDEDORES_IDS
+    store = _load_ads_store()
+    raw = store.get("revendas", {}) or {}
 
     uid_to_name = {uid: name for name, uid in (REVENDEDORES_IDS or {}).items()}
-    with _ADS_LOCK:
-        store = _load_ads_store()
-        raw = store.get("revendas", {}) or {}
-
     merged: dict[str, dict] = {}
     canon_ids: dict[str, int] = {}
 
@@ -951,6 +971,15 @@ def get_ads_summary(revenda: str, request: Request = None):
             month_days.append({"date": cur.isoformat(), "amount": amt})
         cur += timedelta(days=1)
 
+    # Calcular gastos do ano inteiro
+    year_start = date(today.year, 1, 1)
+    year_end = date(today.year, 12, 31)
+    year_total = 0.0
+    cur = year_start
+    while cur <= year_end:
+        year_total += amount_for(cur)
+        cur += timedelta(days=1)
+
     return {
         "revenda": revenda,
         "week": {
@@ -964,6 +993,11 @@ def get_ads_summary(revenda: str, request: Request = None):
             "end": month_end.isoformat(),
             "total": round(month_total, 2),
             "days": month_days,
+        },
+        "year": {
+            "start": year_start.isoformat(),
+            "end": year_end.isoformat(),
+            "total": round(year_total, 2),
         },
     }
 

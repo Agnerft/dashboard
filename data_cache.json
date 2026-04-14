@@ -4314,48 +4314,48 @@
     }
   },
   "logs:7:2026-04-08:2026-04-14": {
-    "ts": 1776178878.2529001,
+    "ts": 1776186475.840124,
     "data": {
       "ranking": [
         {
           "revenda": "REVENDA GABRIEL",
-          "vendas": 231,
+          "vendas": 234,
           "conversoes": 0,
-          "testes": 932,
-          "renovacoes": 579,
-          "conversao": 24.8
+          "testes": 958,
+          "renovacoes": 593,
+          "conversao": 24.4
         },
         {
           "revenda": "ADS - EVERALDO",
           "vendas": 126,
           "conversoes": 0,
-          "testes": 447,
-          "renovacoes": 312,
-          "conversao": 28.2
+          "testes": 452,
+          "renovacoes": 321,
+          "conversao": 27.9
         },
         {
           "revenda": "ADS - GUILHERME",
-          "vendas": 111,
+          "vendas": 113,
           "conversoes": 0,
-          "testes": 343,
-          "renovacoes": 57,
-          "conversao": 32.4
+          "testes": 344,
+          "renovacoes": 58,
+          "conversao": 32.8
         },
         {
           "revenda": "ADS - DAVID",
           "vendas": 101,
           "conversoes": 0,
-          "testes": 580,
-          "renovacoes": 40,
-          "conversao": 17.4
+          "testes": 588,
+          "renovacoes": 42,
+          "conversao": 17.2
         },
         {
           "revenda": "ADS - WILLIAM",
-          "vendas": 79,
+          "vendas": 80,
           "conversoes": 0,
-          "testes": 391,
-          "renovacoes": 37,
-          "conversao": 20.2
+          "testes": 392,
+          "renovacoes": 38,
+          "conversao": 20.4
         },
         {
           "revenda": "ADS - MICHELI",
@@ -4369,17 +4369,17 @@
           "revenda": "ADS - LUCAS",
           "vendas": 73,
           "conversoes": 0,
-          "testes": 309,
-          "renovacoes": 49,
-          "conversao": 23.6
+          "testes": 311,
+          "renovacoes": 51,
+          "conversao": 23.5
         },
         {
           "revenda": "ADS - ALEXANDRE",
-          "vendas": 67,
+          "vendas": 68,
           "conversoes": 0,
-          "testes": 277,
-          "renovacoes": 32,
-          "conversao": 24.2
+          "testes": 278,
+          "renovacoes": 33,
+          "conversao": 24.5
         },
         {
           "revenda": "ADS - BRUNO",
@@ -4391,59 +4391,59 @@
         },
         {
           "revenda": "ADS - JOSE",
-          "vendas": 55,
+          "vendas": 56,
           "conversoes": 0,
-          "testes": 221,
-          "renovacoes": 25,
-          "conversao": 24.9
+          "testes": 223,
+          "renovacoes": 26,
+          "conversao": 25.1
         },
         {
           "revenda": "REVENDA HERON",
           "vendas": 15,
           "conversoes": 0,
-          "testes": 85,
-          "renovacoes": 79,
-          "conversao": 17.6
+          "testes": 88,
+          "renovacoes": 81,
+          "conversao": 17.0
         },
         {
           "revenda": "REVENDA JOAO",
           "vendas": 13,
           "conversoes": 0,
-          "testes": 87,
-          "renovacoes": 112,
-          "conversao": 14.9
+          "testes": 89,
+          "renovacoes": 114,
+          "conversao": 14.6
         },
         {
           "revenda": "REVENDA ERICK",
           "vendas": 13,
           "conversoes": 0,
-          "testes": 99,
-          "renovacoes": 68,
-          "conversao": 13.1
+          "testes": 103,
+          "renovacoes": 70,
+          "conversao": 12.6
         },
         {
           "revenda": "REVENDA ROBSON",
           "vendas": 12,
           "conversoes": 0,
-          "testes": 96,
-          "renovacoes": 117,
-          "conversao": 12.5
+          "testes": 98,
+          "renovacoes": 123,
+          "conversao": 12.2
         },
         {
           "revenda": "REVENDA IGOR",
           "vendas": 12,
           "conversoes": 0,
-          "testes": 103,
-          "renovacoes": 152,
-          "conversao": 11.7
+          "testes": 105,
+          "renovacoes": 157,
+          "conversao": 11.4
         },
         {
           "revenda": "REVENDA JACQUES",
           "vendas": 11,
           "conversoes": 0,
-          "testes": 91,
+          "testes": 92,
           "renovacoes": 63,
-          "conversao": 12.1
+          "conversao": 12.0
         },
         {
           "revenda": "REVENDA JULIO",
@@ -4457,17 +4457,17 @@
           "revenda": "REVENDA ROGERIO",
           "vendas": 7,
           "conversoes": 0,
-          "testes": 81,
+          "testes": 82,
           "renovacoes": 26,
-          "conversao": 8.6
+          "conversao": 8.5
         },
         {
           "revenda": "REVENDA EMERSON",
-          "vendas": 5,
+          "vendas": 6,
           "conversoes": 0,
-          "testes": 35,
-          "renovacoes": 143,
-          "conversao": 14.3
+          "testes": 37,
+          "renovacoes": 146,
+          "conversao": 16.2
         },
         {
           "revenda": "REVENDA JACSON",
@@ -4482,98 +4482,98 @@
     }
   },
   "ativos:7:2026-04-08:2026-04-14": {
-    "ts": 1776179836.720288,
+    "ts": 1776186623.2243924,
     "data": [
       {
         "name": "REVENDA GABRIEL",
-        "total_clientes": 18414,
-        "ativos_reais": 3790,
-        "testes_ativos": 7,
-        "novos_clientes": 5296
+        "total_clientes": 18441,
+        "ativos_reais": 3786,
+        "testes_ativos": 16,
+        "novos_clientes": 5299
       },
       {
         "name": "ADS - EVERALDO",
-        "total_clientes": 4900,
-        "ativos_reais": 2195,
-        "testes_ativos": 1,
+        "total_clientes": 4906,
+        "ativos_reais": 2194,
+        "testes_ativos": 5,
         "novos_clientes": 3060
       },
       {
         "name": "REVENDA IGOR",
-        "total_clientes": 2291,
-        "ativos_reais": 805,
-        "testes_ativos": 0,
+        "total_clientes": 2293,
+        "ativos_reais": 803,
+        "testes_ativos": 2,
         "novos_clientes": 1123
       },
       {
         "name": "REVENDA EMERSON",
-        "total_clientes": 2410,
-        "ativos_reais": 741,
-        "testes_ativos": 0,
-        "novos_clientes": 1165
+        "total_clientes": 2412,
+        "ativos_reais": 742,
+        "testes_ativos": 2,
+        "novos_clientes": 1166
       },
       {
         "name": "REVENDA JOAO",
-        "total_clientes": 1879,
-        "ativos_reais": 683,
-        "testes_ativos": 3,
+        "total_clientes": 1881,
+        "ativos_reais": 679,
+        "testes_ativos": 1,
         "novos_clientes": 1001
       },
       {
         "name": "REVENDA ROBSON",
-        "total_clientes": 2039,
-        "ativos_reais": 669,
+        "total_clientes": 2041,
+        "ativos_reais": 670,
         "testes_ativos": 1,
         "novos_clientes": 976
       },
       {
         "name": "ADS - GUILHERME",
-        "total_clientes": 2030,
+        "total_clientes": 2031,
         "ativos_reais": 586,
         "testes_ativos": 0,
-        "novos_clientes": 766
+        "novos_clientes": 768
       },
       {
         "name": "REVENDA ERICK",
-        "total_clientes": 1607,
+        "total_clientes": 1610,
         "ativos_reais": 523,
-        "testes_ativos": 1,
+        "testes_ativos": 3,
         "novos_clientes": 789
       },
       {
         "name": "ADS - DAVID",
-        "total_clientes": 3174,
+        "total_clientes": 3182,
         "ativos_reais": 468,
         "testes_ativos": 0,
         "novos_clientes": 616
       },
       {
         "name": "ADS - LUCAS",
-        "total_clientes": 1852,
-        "ativos_reais": 456,
-        "testes_ativos": 2,
+        "total_clientes": 1853,
+        "ativos_reais": 455,
+        "testes_ativos": 1,
         "novos_clientes": 600
       },
       {
         "name": "ADS - WILLIAM",
-        "total_clientes": 1851,
-        "ativos_reais": 433,
-        "testes_ativos": 1,
-        "novos_clientes": 594
-      },
-      {
-        "name": "REVENDA HERON",
-        "total_clientes": 1541,
-        "ativos_reais": 430,
-        "testes_ativos": 3,
-        "novos_clientes": 679
+        "total_clientes": 1852,
+        "ativos_reais": 432,
+        "testes_ativos": 0,
+        "novos_clientes": 595
       },
       {
         "name": "ADS - ALEXANDRE",
         "total_clientes": 1894,
         "ativos_reais": 427,
+        "testes_ativos": 0,
+        "novos_clientes": 593
+      },
+      {
+        "name": "REVENDA HERON",
+        "total_clientes": 1542,
+        "ativos_reais": 426,
         "testes_ativos": 1,
-        "novos_clientes": 592
+        "novos_clientes": 679
       },
       {
         "name": "ADS - MICHELI",
@@ -4584,8 +4584,8 @@
       },
       {
         "name": "REVENDA JACQUES",
-        "total_clientes": 1366,
-        "ativos_reais": 371,
+        "total_clientes": 1367,
+        "ativos_reais": 368,
         "testes_ativos": 1,
         "novos_clientes": 572
       },
@@ -4599,29 +4599,29 @@
       {
         "name": "REVENDA JACSON",
         "total_clientes": 430,
-        "ativos_reais": 289,
+        "ativos_reais": 288,
         "testes_ativos": 0,
         "novos_clientes": 414
       },
       {
         "name": "REVENDA JULIO",
         "total_clientes": 1110,
-        "ativos_reais": 288,
+        "ativos_reais": 287,
         "testes_ativos": 0,
         "novos_clientes": 460
       },
       {
         "name": "ADS - JOSE",
-        "total_clientes": 1225,
-        "ativos_reais": 263,
-        "testes_ativos": 0,
-        "novos_clientes": 312
+        "total_clientes": 1227,
+        "ativos_reais": 265,
+        "testes_ativos": 2,
+        "novos_clientes": 313
       },
       {
         "name": "REVENDA ROGERIO",
-        "total_clientes": 1015,
-        "ativos_reais": 198,
-        "testes_ativos": 0,
+        "total_clientes": 1016,
+        "ativos_reais": 197,
+        "testes_ativos": 1,
         "novos_clientes": 296
       }
     ]
