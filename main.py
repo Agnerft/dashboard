@@ -464,7 +464,13 @@ def auth_create_user(body: dict, request: Request):
     username = _norm_text(body.get("username"))
     password = _norm_text(body.get("password"))
     role = _norm_text(body.get("role") or "user")
-    revenda = _norm_text(body.get("revenda") or "")
+    raw_revenda = body.get("revenda") or ""
+    if isinstance(raw_revenda, list):
+        revenda = [_norm_text(r) for r in raw_revenda if r]
+        if len(revenda) == 1:
+            revenda = revenda[0]
+    else:
+        revenda = _norm_text(raw_revenda)
 
     if not username or not password:
         raise HTTPException(status_code=400, detail="username e password são obrigatórios")
