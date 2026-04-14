@@ -178,14 +178,19 @@ def get_ativos(revendedores_ids):
             cached["name"] = nome
             return cached
 
-        def fetch_count(extra_params=None, timeout=25):
+        def fetch_count(extra_params=None, timeout=15):
             params = {"user_id": uid, "page": 1, "per_page": 1}
             if extra_params:
                 params.update(extra_params)
-            payload = _request_json(base_url, params=params, timeout=timeout)
-            return _safe_count(payload)
+            try:
+                payload = _request_json(base_url, params=params, timeout=timeout)
+                return _safe_count(payload)
+            except Exception as e:
+                logger.warning("Timeout/contagem falhou para %s: %s", nome, e)
+                return 0
 
         try:
+            # Fazer todas as contagens com timeout menor
             result = {
                 "name": nome,
                 "total_clientes": fetch_count(),
@@ -208,7 +213,7 @@ def get_ativos(revendedores_ids):
             fallback["stale"] = bool(cache_entry)
             return fallback
 
-    max_workers = min(8, max(2, len(revendedores_ids) or 1))
+    max_workers = min(16, max(4, len(revendedores_ids) or 1))
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
             executor.submit(fetch_one, nome, uid)
@@ -217,7 +222,7 @@ def get_ativos(revendedores_ids):
         ]
         for fut in as_completed(futures):
             try:
-                r = fut.result()
+                r = fut.result(timeout=60)  # Timeout total por worker
                 if r is not None:
                     data.append(r)
             except Exception as e:

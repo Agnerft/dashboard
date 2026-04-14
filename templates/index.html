@@ -885,7 +885,21 @@
             renderRows(Object.values(window._baseRows)); 
             setStatus('ads', 'done', 'ADS carregado'); 
             
-            fetch(`/api/partials/ativos?force=${force ? 1 : 0}&${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Falha ao carregar ativos'); return d; }).then((d) => { applyAtivosToBaseRows(d.ativos || []); renderRows(Object.values(window._baseRows)); setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`); }).catch((e) => { console.error(e); setStatus('ativos', 'error', 'Erro ao carregar ativos'); }); 
+            fetch(`/api/partials/ativos?force=${force ? 1 : 0}&${qs}`, { 
+                headers: { 'Authorization': 'Bearer ' + token },
+                signal: AbortSignal.timeout(90000) // 90 segundos timeout
+            }).then(async (r) => { 
+                const d = await r.json(); 
+                if (!r.ok) throw new Error(d.detail || 'Falha ao carregar ativos'); 
+                return d; 
+            }).then((d) => { 
+                applyAtivosToBaseRows(d.ativos || []); 
+                renderRows(Object.values(window._baseRows)); 
+                setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`); 
+            }).catch((e) => { 
+                console.error('Erro ativos:', e); 
+                setStatus('ativos', 'error', 'Erro ao carregar ativos (timeout)'); 
+            }); 
             
             fetch(`/api/partials/logs?force=${force ? 1 : 0}&${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Falha ao carregar logs'); return d; }).then((d) => { applyLogsToBaseRows(d); renderRows(Object.values(window._baseRows)); setStatus('vendas', 'done', 'Vendas carregadas'); setStatus('testes', 'done', 'Testes carregados'); document.getElementById('last-update').innerText = 'Atualizado: ' + new Date().toLocaleString(); }).catch((e) => { console.error(e); setStatus('vendas', 'error', 'Erro ao carregar vendas'); setStatus('testes', 'error', 'Erro ao carregar testes'); }); 
         } catch (error) { 
