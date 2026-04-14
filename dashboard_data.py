@@ -6,19 +6,19 @@ from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logger = logging.getLogger("dashboard.data")
 
-# Configurações globais
 API_KEY = os.environ.get("PAINEL_BEST_API_KEY", "klxMbmr6pWOGO48GNvG746SWnQk_BMl3In4c_9IDpD4")
 HEADERS = {
     "api-key": API_KEY,
     "Api-Key": API_KEY,
     "accept": "*/*",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
 }
 
-# Mapeamento de usernames do log para nomes exibidos no dashboard
 RESELLER_MAP = {
     "alecsmoura": "ADS - ALECS",
     "Grafite": "ADS - GRAFITE",
@@ -58,7 +58,6 @@ RESELLER_MAP = {
     "rafa": "ADS - RAFANATV",
 }
 
-# IDs das revendas para busca de ativos
 REVENDEDORES_IDS = {
     "REVENDA GABRIEL": 2054,
     "REVENDA EMERSON": 2915,
@@ -92,11 +91,27 @@ _lines_cache = {}
 _lines_cache_ttl_seconds = 300
 
 
+def _build_retry():
+    return Retry(
+        total=2,
+        connect=2,
+        read=2,
+        status=2,
+        backoff_factor=0.7,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+    )
+
+
 def _get_session():
     sess = getattr(_thread_local, "session", None)
     if sess is None:
         sess = requests.Session()
         sess.headers.update(HEADERS)
+        adapter = HTTPAdapter(max_retries=_build_retry(), pool_connections=20, pool_maxsize=20)
+        sess.mount("https://", adapter)
+        sess.mount("http://", adapter)
         _thread_local.session = sess
     return sess
 
@@ -163,29 +178,37 @@ def get_ativos(revendedores_ids):
             cached["name"] = nome
             return cached
 
-        def fetch_count(extra_params=None):
+        def fetch_count(extra_params=None, timeout=25):
             params = {"user_id": uid, "page": 1, "per_page": 1}
             if extra_params:
                 params.update(extra_params)
-            try:
-                payload = _request_json(base_url, params=params, timeout=10)
-                return _safe_count(payload)
-            except Exception as e:
-                logger.warning("Falha ao buscar ativos para %s (%s): %s", nome, uid, e)
-                return 0
+            payload = _request_json(base_url, params=params, timeout=timeout)
+            return _safe_count(payload)
 
-        result = {
-            "name": nome,
-            "total_clientes": fetch_count(),
-            "ativos_reais": fetch_count({"is_trial": "false", "is_expired": "false"}),
-            "testes_ativos": fetch_count({"is_trial": "true", "is_expired": "false"}),
-            "novos_clientes": fetch_count({"is_trial": "false"}),
-        }
+        try:
+            result = {
+                "name": nome,
+                "total_clientes": fetch_count(),
+                "ativos_reais": fetch_count({"is_trial": "false", "is_expired": "false"}),
+                "testes_ativos": fetch_count({"is_trial": "true", "is_expired": "false"}),
+                "novos_clientes": fetch_count({"is_trial": "false"}),
+            }
+            _lines_cache[uid] = {"ts": now, "data": result.copy()}
+            return result
+        except Exception as e:
+            logger.warning("Falha ao buscar ativos para %s (%s): %s", nome, uid, e)
+            fallback = cache_entry["data"].copy() if cache_entry else {
+                "name": nome,
+                "total_clientes": 0,
+                "ativos_reais": 0,
+                "testes_ativos": 0,
+                "novos_clientes": 0,
+            }
+            fallback["name"] = nome
+            fallback["stale"] = bool(cache_entry)
+            return fallback
 
-        _lines_cache[uid] = {"ts": now, "data": result.copy()}
-        return result
-
-    max_workers = min(16, max(4, len(revendedores_ids) or 1))
+    max_workers = min(8, max(2, len(revendedores_ids) or 1))
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
             executor.submit(fetch_one, nome, uid)
@@ -224,7 +247,7 @@ def _count_logs_for_uid(uid: int, start_ts: int, end_ts: int):
                 "per_page": 1000,
             }
             try:
-                res = _request_json(base_url, params=params, timeout=20)
+                res = _request_json(base_url, params=params, timeout=25)
             except Exception as e:
                 logger.warning("Falha ao buscar logs %s para uid=%s: %s", action, uid, e)
                 break
@@ -236,9 +259,7 @@ def _count_logs_for_uid(uid: int, start_ts: int, end_ts: int):
             valid_count = 0
             for log in results:
                 created_at = int(log.get("created_at") or 0)
-                if created_at < start_ts:
-                    continue
-                if created_at > end_ts:
+                if created_at < start_ts or created_at > end_ts:
                     continue
                 valid_count += 1
 
@@ -261,9 +282,6 @@ def get_ranking(days=7, revendedores_ids=None, period=None, start_ts=None, end_t
     stats = {}
     discovered_ids = {}
 
-    allowed_uids = None
-    id_to_name = None
-
     if isinstance(revendedores_ids, dict) and revendedores_ids:
         id_to_name = {uid: name for name, uid in revendedores_ids.items() if uid not in BLACKLISTED_USER_IDS}
         allowed_uids = set(id_to_name.keys())
@@ -271,7 +289,7 @@ def get_ranking(days=7, revendedores_ids=None, period=None, start_ts=None, end_t
         for name in revendedores_ids.keys():
             stats[name] = {"tests": 0, "sales_new": 0, "conversions": 0, "renewals": 0}
 
-        max_workers = min(16, max(4, len(allowed_uids) or 1))
+        max_workers = min(8, max(2, len(allowed_uids) or 1))
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(_count_logs_for_uid, uid, start_ts, end_ts) for uid in allowed_uids]
             future_to_uid = {future: uid for future, uid in zip(futures, allowed_uids)}
@@ -310,7 +328,7 @@ def get_ranking(days=7, revendedores_ids=None, period=None, start_ts=None, end_t
                     "per_page": 1000,
                 }
                 try:
-                    res = _request_json(base_url, params=params, timeout=20)
+                    res = _request_json(base_url, params=params, timeout=25)
                 except Exception as e:
                     logger.warning("Falha ao buscar logs globais %s: %s", action, e)
                     break
@@ -354,13 +372,15 @@ def get_ranking(days=7, revendedores_ids=None, period=None, start_ts=None, end_t
         sales_new = int(m.get("sales_new", 0) or 0)
         renewals = int(m.get("renewals", 0) or 0)
         conv = round((sales_new / tests * 100), 1) if tests > 0 else 0.0
-        result.append({
-            "revenda": name,
-            "vendas": sales_new,
-            "conversoes": 0,
-            "testes": tests,
-            "renovacoes": renewals,
-            "conversao": conv,
-        })
+        result.append(
+            {
+                "revenda": name,
+                "vendas": sales_new,
+                "conversoes": 0,
+                "testes": tests,
+                "renovacoes": renewals,
+                "conversao": conv,
+            }
+        )
 
     return sorted(result, key=lambda x: (x["vendas"], x["conversao"]), reverse=True), discovered_ids

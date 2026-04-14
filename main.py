@@ -46,6 +46,38 @@ _USERS_FILE = os.path.join(BASE_DIR, "users.json")
 _AUTH_SECRET = os.environ.get("DASH_AUTH_SECRET", "change-me-local-secret")
 _USERS_LOCK = threading.Lock()
 
+_ADS_ID_MAP_FILE = os.path.join(BASE_DIR, "ads_id_map.json")
+_ADS_ID_MAP_LOCK = threading.Lock()
+
+
+def _load_ads_id_map() -> dict:
+    """Carrega o mapeamento aprendido: ads_platform_id (str) → canonical revenda name."""
+    try:
+        if os.path.exists(_ADS_ID_MAP_FILE):
+            with open(_ADS_ID_MAP_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        pass
+    return {}
+
+
+def _save_ads_id_map(mapping: dict):
+    tmp = _ADS_ID_MAP_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(mapping, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, _ADS_ID_MAP_FILE)
+
+
+def _learn_ads_id(ads_id: int, canonical: str):
+    """Salva permanentemente id → canonical para futuros imports."""
+    with _ADS_ID_MAP_LOCK:
+        mapping = _load_ads_id_map()
+        key = str(ads_id)
+        if mapping.get(key) != canonical:
+            mapping[key] = canonical
+            _save_ads_id_map(mapping)
+
 
 class AdsEntry(BaseModel):
     date: str
@@ -586,22 +618,61 @@ def _compute_payload(days: int, period: str | None = None):
         logger.exception("Erro ao buscar ativos em _compute_payload.")
         ativos_info = []
 
-    ativos_map = {
-        item.get("name"): item
-        for item in ativos_info
-        if isinstance(item, dict) and item.get("name")
-    }
-
     ads_revendas, _ = _get_ads_canonical()
+
+    ativos_map: dict[str, dict] = {}
+    for item in ativos_info:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("name")
+        if not name:
+            continue
+        canon = _canonicalize_revenda_name(name)
+        if canon not in ativos_map:
+            ativos_map[canon] = dict(item)
+            ativos_map[canon]["name"] = canon
+        else:
+            # mantém o melhor registro em caso de duplicidade por alias
+            prev = ativos_map[canon]
+            for field in ("total_clientes", "ativos_reais", "testes_ativos", "novos_clientes"):
+                prev[field] = max(int(prev.get(field, 0) or 0), int(item.get(field, 0) or 0))
+
+    ranking_map: dict[str, dict] = {}
+    for item in ranking or []:
+        if not isinstance(item, dict):
+            continue
+        name = item.get("revenda")
+        if not name:
+            continue
+        canon = _canonicalize_revenda_name(name)
+        base = ranking_map.setdefault(
+            canon,
+            {
+                "revenda": canon,
+                "vendas": 0,
+                "conversoes": 0,
+                "testes": 0,
+                "renovacoes": 0,
+                "conversao": 0.0,
+            },
+        )
+        base["vendas"] += int(item.get("vendas", 0) or 0)
+        base["conversoes"] += int(item.get("conversoes", 0) or 0)
+        base["testes"] += int(item.get("testes", 0) or 0)
+        base["renovacoes"] += int(item.get("renovacoes", 0) or 0)
+
+    for base in ranking_map.values():
+        tests = int(base.get("testes", 0) or 0)
+        sales = int(base.get("vendas", 0) or 0)
+        base["conversao"] = round((sales / tests * 100), 1) if tests > 0 else 0.0
+
+    all_names = list(REVENDEDORES_IDS.keys())
+    for extra in sorted(set(ativos_map.keys()) | set(ranking_map.keys()) | set(ads_revendas.keys())):
+        if extra not in all_names:
+            all_names.append(extra)
+
     detalhamento_completo = []
-
-    ranking_map = {
-        item.get("revenda"): item
-        for item in (ranking or [])
-        if isinstance(item, dict) and item.get("revenda")
-    }
-
-    for name in REVENDEDORES_IDS.keys():
+    for name in all_names:
         rank = ranking_map.get(
             name,
             {
@@ -609,7 +680,7 @@ def _compute_payload(days: int, period: str | None = None):
                 "conversoes": 0,
                 "testes": 0,
                 "renovacoes": 0,
-                "conversao": 0,
+                "conversao": 0.0,
             },
         )
         ativos = ativos_map.get(
@@ -622,10 +693,10 @@ def _compute_payload(days: int, period: str | None = None):
             },
         )
 
-        rev_map = ads_revendas.get(name, {})
+        rev_map = ads_revendas.get(name, {}) or {}
         ads_today = float(rev_map.get(date.today().isoformat(), 0) or 0)
         ads_period = _ads_amounts_for_revenda_in_range(rev_map, start_d, end_d)
-        sales_total = int(rank.get("vendas", 0) or 0) + int(rank.get("conversoes", 0) or 0)
+        sales_total = int(rank.get("vendas", 0) or 0) + int(rank.get("renovacoes", 0) or 0)
         cost_per_sale = round((ads_period / sales_total), 2) if sales_total > 0 else 0.0
 
         detalhamento_completo.append(
@@ -647,24 +718,21 @@ def _compute_payload(days: int, period: str | None = None):
             }
         )
 
-    detalhamento_completo.sort(key=lambda x: x["vendas"], reverse=True)
+    detalhamento_completo.sort(key=lambda x: (x["vendas"], x["renovacoes"], x["ativos_reais"]), reverse=True)
 
-    total_clientes = sum(int(item.get("total_clientes", 0) or 0) for item in ativos_info if isinstance(item, dict))
-    ativos_reais = sum(int(item.get("ativos_reais", 0) or 0) for item in ativos_info if isinstance(item, dict))
-    testes_ativos = sum(int(item.get("testes_ativos", 0) or 0) for item in ativos_info if isinstance(item, dict))
-    novos_clientes = sum(int(item.get("novos_clientes", 0) or 0) for item in ativos_info if isinstance(item, dict))
-    total_vendas = sum(int(item.get("vendas", 0) or 0) for item in ranking if isinstance(item, dict))
+    total_clientes = sum(int(item.get("total_clientes", 0) or 0) for item in ativos_map.values())
+    ativos_reais = sum(int(item.get("ativos_reais", 0) or 0) for item in ativos_map.values())
+    testes_ativos = sum(int(item.get("testes_ativos", 0) or 0) for item in ativos_map.values())
+    novos_clientes = sum(int(item.get("novos_clientes", 0) or 0) for item in ativos_map.values())
+    total_vendas = sum(int(item.get("vendas", 0) or 0) for item in ranking_map.values())
 
     ads_today_total = round(
-        sum(float((ads_revendas.get(name, {}) or {}).get(date.today().isoformat(), 0) or 0) for name in REVENDEDORES_IDS.keys()),
+        sum(float((ads_revendas.get(name, {}) or {}).get(date.today().isoformat(), 0) or 0) for name in all_names),
         2,
     )
 
     ads_period_total = round(
-        sum(
-            _ads_amounts_for_revenda_in_range((ads_revendas.get(name, {}) or {}), start_d, end_d)
-            for name in REVENDEDORES_IDS.keys()
-        ),
+        sum(_ads_amounts_for_revenda_in_range((ads_revendas.get(name, {}) or {}), start_d, end_d) for name in all_names),
         2,
     )
 
@@ -939,21 +1007,102 @@ def _parse_brl_to_float(text: str) -> float:
         return 0.0
 
 
-def _normalize_revenda_name(header: str) -> str:
+def _extract_header_info(header: str) -> tuple[str, int | None]:
+    """
+    Extrai (nome_base, ads_platform_id) de linhas de cabeçalho como:
+      - "REV - OFICIAL JOAO ( 4803 )"
+      - "REV - JOAO ( 4803 )"
+      - "REV - OFICIAL IGOR&KEISY ( 5141 )"
+      - "ADS - MATEUS"
+      - "ADS - GUILHERME - 3523"
+    Retorna o nome limpo e o ID numérico (ou None).
+    """
+    h = header.strip()
+
+    # 1. Extrair ID numérico entre parênteses: ( 4803 )
+    id_match = re.search(r'\(\s*(\d{3,8})\s*\)', h)
+    ads_id = int(id_match.group(1)) if id_match else None
+    if id_match:
+        h = (h[:id_match.start()] + h[id_match.end():]).strip()
+
+    # 2. Remover ID colado no final sem parênteses: "- 3523" ou " 3523"
+    h = re.sub(r'[\s\-]+\d{3,8}\s*$', '', h).strip()
+
+    # 3. Remover prefixos conhecidos (ordem importa: mais específico primeiro)
+    _PREFIXES = [
+        "REV - OFICIAL", "REV -", "REV", "REVENDA -", "REVENDA",
+        "ADS -", "ADS",
+    ]
+    h_upper = h.upper()
+    for prefix in _PREFIXES:
+        if h_upper.startswith(prefix.upper()):
+            h = h[len(prefix):].strip()
+            break
+
+    # 4. Remover nome secundário após "&" (ex: "IGOR&KEISY" → "IGOR")
+    h = re.split(r'[&/]', h)[0].strip()
+
+    # 5. Remover traços soltos no início
+    h = h.lstrip('- ').strip()
+
+    return h, ads_id
+
+
+def _resolve_name_to_canonical(name: str) -> tuple[str, bool]:
+    """
+    Tenta resolver 'name' para um nome canônico em REVENDEDORES_IDS.
+    Retorna (canonical, found).
+    Tenta prefixos 'ADS - ' e 'REVENDA ' além do nome puro.
+    """
+    from dashboard_data import REVENDEDORES_IDS
+    candidates = [
+        f"ADS - {name}",
+        f"REVENDA {name}",
+        name,
+    ]
+    for candidate in candidates:
+        resolved = _resolve_revenda_alias(candidate)
+        if resolved in REVENDEDORES_IDS:
+            return resolved, True
+    # fallback sem garantia de match
+    return _canonicalize_revenda_name(f"ADS - {name}"), False
+
+
+def _normalize_revenda_name(header: str) -> tuple[str, int | None, bool]:
+    """
+    Retorna (canonical_name, ads_platform_id, matched).
+    - matched=True: encontrou a revenda no sistema com confiança.
+    - ads_platform_id: ID numérico extraído do cabeçalho (ex: 4803), ou None.
+    """
+    # Verificar primeiro se é formato "ADS - X" simples (compatibilidade)
     h = header.strip()
     if h.upper().startswith("ADS -"):
-        return _canonicalize_revenda_name("ADS - " + h.split("ADS -", 1)[1].strip())
+        canon = _canonicalize_revenda_name(h)
+        from dashboard_data import REVENDEDORES_IDS
+        found = canon in REVENDEDORES_IDS
+        return canon, None, found
 
-    parts = h.split()
-    name_parts = []
-    for p in parts:
-        if any(ch.isdigit() for ch in p):
-            break
-        name_parts.append(p)
-    base = " ".join(name_parts).strip()
-    if not base:
-        base = h
-    return _canonicalize_revenda_name(f"ADS - {base}")
+    name_part, ads_id = _extract_header_info(header)
+
+    # 1. Tentar pelo ID aprendido (mais confiável)
+    if ads_id is not None:
+        with _ADS_ID_MAP_LOCK:
+            id_map = _load_ads_id_map()
+        saved = id_map.get(str(ads_id))
+        if saved:
+            return saved, ads_id, True
+
+    # 2. Resolver pelo nome
+    if not name_part:
+        return header.strip(), ads_id, False
+
+    canonical, found = _resolve_name_to_canonical(name_part)
+
+    # 3. Se encontrou e temos um ID, aprender para o futuro
+    if found and ads_id is not None:
+        _learn_ads_id(ads_id, canonical)
+
+    return canonical, ads_id, found
 
 
 @app.post("/api/ads/ingest-txt")
@@ -983,24 +1132,33 @@ def ingest_ads_txt(payload: AdsIngestTxt, request: Request):
     parsed = []
     for blk in blocks:
         header = blk[0] if blk else ""
-        revenda = _normalize_revenda_name(header)
+        revenda, ads_id, matched = _normalize_revenda_name(header)
         total_line = next((l for l in blk if "Total a pagar" in l or "Total a Pagar" in l), "")
         if not total_line:
             continue
         val_str = total_line.split("R$", 1)[-1].strip()
         amount = _parse_brl_to_float(val_str)
-        parsed.append({"revenda": revenda, "date": day.isoformat(), "amount": round(amount, 2)})
+        parsed.append({
+            "revenda": revenda,
+            "date": day.isoformat(),
+            "amount": round(amount, 2),
+            "matched": matched,
+            "ads_id": ads_id,
+            "header_original": header,
+        })
 
     if user_role != "admin" and user_rev and user_rev != "*":
         parsed = [it for it in parsed if it.get("revenda") == user_rev]
         if payload.save and not parsed:
             raise HTTPException(status_code=403, detail="forbidden")
 
-    if payload.save and parsed:
+    # Ao salvar, só persiste entradas com match confirmado
+    to_save = [it for it in parsed if it.get("matched")]
+    if payload.save and to_save:
         with _ADS_LOCK:
             store = _load_ads_store()
             store.setdefault("revendas", {})
-            for item in parsed:
+            for item in to_save:
                 rev = item["revenda"]
                 d = item["date"]
                 amt = item["amount"]
@@ -1011,7 +1169,56 @@ def ingest_ads_txt(payload: AdsIngestTxt, request: Request):
                     store["revendas"][rev][d] = amt
             _save_ads_store(store)
 
-    return {"parsed": parsed, "saved": bool(payload.save)}
+    return {"parsed": parsed, "saved": bool(payload.save), "unmatched": [it for it in parsed if not it.get("matched")]}
+
+
+class AdsIdMapEntry(BaseModel):
+    ads_id: int
+    revenda: str
+
+
+@app.get("/api/ads/id-map")
+def get_ads_id_map(request: Request):
+    """Retorna o mapeamento atual de IDs da plataforma ADS → revenda canônica."""
+    _require_auth(request)
+    with _ADS_ID_MAP_LOCK:
+        mapping = _load_ads_id_map()
+    return {"mapping": mapping}
+
+
+@app.post("/api/ads/id-map")
+def set_ads_id_map_entry(entry: AdsIdMapEntry, request: Request):
+    """Admin: define manualmente um mapeamento ID → revenda."""
+    scope = _auth_scope_from_request(request)
+    if scope.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Apenas admins podem editar o mapa de IDs.")
+    from dashboard_data import REVENDEDORES_IDS
+    canonical = _canonicalize_revenda_name(entry.revenda)
+    if canonical not in REVENDEDORES_IDS:
+        # Tenta resolver alias
+        from dashboard_data import REVENDEDORES_IDS as RIDs
+        if entry.revenda in RIDs:
+            canonical = entry.revenda
+        else:
+            raise HTTPException(status_code=400, detail=f"Revenda '{entry.revenda}' não encontrada no sistema. Use o nome exato (ex: REVENDA JOAO, ADS - JUNIOR).")
+    _learn_ads_id(entry.ads_id, canonical)
+    return {"ok": True, "ads_id": entry.ads_id, "canonical": canonical}
+
+
+@app.delete("/api/ads/id-map/{ads_id}")
+def delete_ads_id_map_entry(ads_id: int, request: Request):
+    """Admin: remove uma entrada do mapa de IDs."""
+    scope = _auth_scope_from_request(request)
+    if scope.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Apenas admins podem editar o mapa de IDs.")
+    with _ADS_ID_MAP_LOCK:
+        mapping = _load_ads_id_map()
+        key = str(ads_id)
+        if key not in mapping:
+            raise HTTPException(status_code=404, detail="ID não encontrado no mapa.")
+        del mapping[key]
+        _save_ads_id_map(mapping)
+    return {"ok": True, "removed": ads_id}
 
 
 @app.post("/api/ads/bulk-entries")
