@@ -257,6 +257,7 @@ def _count_logs_for_uid(uid: int, start_ts: int, end_ts: int):
 
     for action, target in action_map.items():
         page = 1
+        consecutive_errors = 0
         while True:
             params = {
                 "action": action,
@@ -266,10 +267,15 @@ def _count_logs_for_uid(uid: int, start_ts: int, end_ts: int):
                 "per_page": 1000,
             }
             try:
-                res = _request_json(base_url, params=params, timeout=25)
+                res = _request_json(base_url, params=params, timeout=15)
+                consecutive_errors = 0  # Reset error count on success
             except Exception as e:
-                logger.warning("Falha ao buscar logs %s para uid=%s: %s", action, uid, e)
-                break
+                consecutive_errors += 1
+                logger.warning("Falha ao buscar logs %s para uid=%s (tentativa %s): %s", action, uid, consecutive_errors, e)
+                if consecutive_errors >= 3:
+                    logger.error("Muitos erros consecutivos para uid=%s, abortando action=%s", uid, action)
+                    break
+                continue  # Tenta novamente a mesma página
 
             results = res.get("results", []) or []
             if not results:
@@ -308,15 +314,22 @@ def get_ranking(days=7, revendedores_ids=None, period=None, start_ts=None, end_t
         for name in revendedores_ids.keys():
             stats[name] = {"tests": 0, "sales_new": 0, "conversions": 0, "renewals": 0}
 
-        max_workers = min(8, max(2, len(allowed_uids) or 1))
+        # Aumentar workers para 20 (antes era 8)
+        max_workers = min(20, max(4, len(allowed_uids) or 1))
+        logger.info(f"Iniciando busca de ranking com {max_workers} workers para {len(allowed_uids)} revendedores")
+        
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [executor.submit(_count_logs_for_uid, uid, start_ts, end_ts) for uid in allowed_uids]
             future_to_uid = {future: uid for future, uid in zip(futures, allowed_uids)}
 
+            completed = 0
             for fut in as_completed(future_to_uid):
                 uid = future_to_uid[fut]
                 try:
-                    counts = fut.result()
+                    counts = fut.result(timeout=120)  # Timeout de 2 minutos por revendedor
+                    completed += 1
+                    if completed % 5 == 0:
+                        logger.info(f"Progresso: {completed}/{len(allowed_uids)} revendedores processados")
                 except Exception as e:
                     logger.warning("Erro ao consolidar logs do uid=%s: %s", uid, e)
                     continue
@@ -329,6 +342,8 @@ def get_ranking(days=7, revendedores_ids=None, period=None, start_ts=None, end_t
                 stats[name]["sales_new"] = int(counts.get("sales_new", 0) or 0)
                 stats[name]["renewals"] = int(counts.get("renewals", 0) or 0)
                 discovered_ids[name] = uid
+        
+        logger.info(f"Busca de ranking concluída. {completed}/{len(allowed_uids)} revendedores com sucesso.")
     else:
         base_url = "https://api.painel.best/user/logs/"
         action_map = {
