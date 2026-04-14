@@ -845,7 +845,33 @@
     async function ingestGlobalJsonFile() { const input = document.getElementById('ads-global-json-file'); const preview = document.getElementById('ads-global-json-preview'); preview.innerHTML = ''; if (!input.files || input.files.length === 0) { alert('Escolha um arquivo JSON.'); return; } const file = input.files[0]; try { const text = await file.text(); let payload = JSON.parse(text); if (!Array.isArray(payload)) { alert('O JSON deve ser um array de objetos.'); return; } const token = authToken(); const resp = await fetch('/api/ads/bulk-entries', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(payload) }); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Falha ao enviar o JSON'); preview.innerHTML = `<div class="text-success">Importado com sucesso. Registros atualizados: <b>${data.updated}</b> | Revendas: <b>${data.revendas}</b></div>`; await updateData(true); } catch (e) { preview.innerHTML = `<div class="text-danger">Erro ao processar JSON: ${e.message || e}</div>`; } }
     function initBaseRowsFromAds(adsData) { const baseRows = {}; (adsData.rows || []).forEach(r => { baseRows[r.revenda] = { revenda: r.revenda, ativos_reais: 0, vendas: 0, testes: 0, conversao: 0, ads_period: r.ads_period || 0, cost_per_sale: 0, total_clientes: 0, novos_clientes: 0, testes_ativos: 0 }; }); window._baseRows = baseRows; return baseRows; }
     function applyAtivosToBaseRows(ativosList) { const baseRows = window._baseRows || {}; let totalClientes = 0, ativosReaisTotal = 0, testesAtivosTotal = 0, novosClientesTotal = 0; (ativosList || []).forEach(a => { totalClientes += (a.total_clientes || 0); ativosReaisTotal += (a.ativos_reais || 0); testesAtivosTotal += (a.testes_ativos || 0); novosClientesTotal += (a.novos_clientes || 0); baseRows[a.name] = baseRows[a.name] || { revenda: a.name, ativos_reais:0, vendas:0, testes:0, conversao:0, ads_period:0, cost_per_sale:0, total_clientes:0, novos_clientes:0, testes_ativos:0 }; baseRows[a.name].ativos_reais = a.ativos_reais || 0; baseRows[a.name].total_clientes = a.total_clientes || 0; baseRows[a.name].novos_clientes = a.novos_clientes || 0; baseRows[a.name].testes_ativos = a.testes_ativos || 0; }); document.getElementById('kpi-total-clientes').innerText = totalClientes.toLocaleString(); document.getElementById('kpi-ativos-reais').innerText = ativosReaisTotal.toLocaleString(); document.getElementById('kpi-testes-ativos').innerText = testesAtivosTotal.toLocaleString(); document.getElementById('kpi-novos-clientes').innerText = novosClientesTotal.toLocaleString(); window._baseRows = baseRows; }
-    function applyLogsToBaseRows(data) { const baseRows = window._baseRows || {}; (data.ranking || []).forEach(row => { const name = row.revenda; baseRows[name] = baseRows[name] || { revenda: name, ativos_reais:0, vendas:0, testes:0, conversao:0, ads_period:0, cost_per_sale:0, total_clientes:0, novos_clientes:0, testes_ativos:0 }; baseRows[name].vendas = row.vendas || 0; baseRows[name].testes = row.testes || 0; baseRows[name].conversao = row.conversao || 0; const salesTotal = (row.vendas || 0); const adsPeriod = baseRows[name].ads_period || 0; baseRows[name].cost_per_sale = salesTotal > 0 ? +(adsPeriod / salesTotal).toFixed(2) : 0; }); window._baseRows = baseRows; }
+    function applyLogsToBaseRows(data) { 
+        const baseRows = window._baseRows || {}; 
+        (data.ranking || []).forEach(row => { 
+            const name = row.revenda; 
+            baseRows[name] = baseRows[name] || { 
+                revenda: name, 
+                ativos_reais:0, 
+                vendas:0, 
+                testes:0, 
+                renovacoes:0,  // ADICIONAR AQUI
+                conversao:0, 
+                ads_period:0, 
+                cost_per_sale:0, 
+                total_clientes:0, 
+                novos_clientes:0, 
+                testes_ativos:0 
+            }; 
+            baseRows[name].vendas = row.vendas || 0; 
+            baseRows[name].testes = row.testes || 0; 
+            baseRows[name].renovacoes = row.renovacoes || 0;  // ADICIONAR AQUI
+            baseRows[name].conversao = row.conversao || 0; 
+            const salesTotal = (row.vendas || 0) + (row.renovacoes || 0);  // INCLUIR RENOVAÇÕES
+            const adsPeriod = baseRows[name].ads_period || 0; 
+            baseRows[name].cost_per_sale = salesTotal > 0 ? +(adsPeriod / salesTotal).toFixed(2) : 0; 
+        }); 
+        window._baseRows = baseRows; 
+    }
     async function updateData(force) { 
         const token = authToken(); 
         if (!token) { showLogin(); return; } 
