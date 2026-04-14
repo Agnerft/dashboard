@@ -973,8 +973,19 @@ def get_ads_summary(revenda: str, request: Request = None):
     user_rev = scope.get("revenda") or ""
 
     revenda = _canonicalize_revenda_name(revenda)
-    if user_role != "admin" and user_rev and user_rev != "*" and revenda != user_rev:
-        raise HTTPException(status_code=403, detail="forbidden")
+    
+    # Log para debug
+    logger.info(f"ADS Summary - User: {scope.get('username')}, Role: {user_role}, UserRev: {user_rev}, Requested: {revenda}")
+    
+    # Verificar permissão - admin vê tudo, user vê apenas suas revendas
+    if user_role != "admin":
+        if isinstance(user_rev, list):
+            if revenda not in user_rev:
+                logger.warning(f"Acesso negado: {revenda} não está em {user_rev}")
+                raise HTTPException(status_code=403, detail="forbidden")
+        elif user_rev and user_rev != "*" and revenda != user_rev:
+            logger.warning(f"Acesso negado: {revenda} != {user_rev}")
+            raise HTTPException(status_code=403, detail="forbidden")
 
     today = date.today()
     week_start, week_end = _week_range(today)

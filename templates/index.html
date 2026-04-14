@@ -612,6 +612,51 @@
                         <div id="id-map-list" class="space-y-1.5 text-sm"></div>
                     </div>
                 </details>
+
+                <!-- Importar ADS de Meses Anteriores -->
+                <details class="card-sm overflow-hidden">
+                    <summary class="px-4 py-3.5 font-semibold cursor-pointer text-main flex items-center justify-between">
+                        <span class="flex items-center gap-2"><i class="fas fa-calendar-alt muted text-sm"></i> Importar ADS de Meses Anteriores</span>
+                        <i class="fas fa-chevron-down muted text-xs"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-3 space-y-3" style="border-top:1px solid var(--border);">
+                        <p class="text-xs muted">Importe dados de ADS de meses anteriores (Janeiro, Fevereiro, Março, etc). Selecione o mês e cole os blocos TXT.</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <button onclick="openHistoricalImport('2025-01', 'Janeiro 2025')" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-calendar"></i> Jan/2025
+                            </button>
+                            <button onclick="openHistoricalImport('2025-02', 'Fevereiro 2025')" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-calendar"></i> Fev/2025
+                            </button>
+                            <button onclick="openHistoricalImport('2025-03', 'Março 2025')" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-calendar"></i> Mar/2025
+                            </button>
+                            <button onclick="openHistoricalImport('2025-04', 'Abril 2025')" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-calendar"></i> Abr/2025
+                            </button>
+                        </div>
+                        <div id="historical-import-area" class="hidden mt-4 p-4 rounded-lg" style="background:var(--bg-soft);">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="font-semibold text-sm" id="historical-month-label">Mês</span>
+                                <button onclick="closeHistoricalImport()" class="btn btn-ghost btn-sm"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs muted">Selecione o dia:</label>
+                                <select id="historical-day-select" class="soft-select w-full px-3 py-2 text-sm">
+                                    <!-- Opções serão preenchidas via JS -->
+                                </select>
+                                
+                                <textarea id="historical-txt" rows="6" class="soft-textarea w-full px-3 py-2 text-sm mt-2" placeholder="Cole aqui os blocos TXT do dia selecionado..."></textarea>
+                                
+                                <div class="flex gap-2 mt-2">
+                                    <button onclick="ingestHistoricalTxt(false)" class="btn btn-secondary btn-sm">Pré-visualizar</button>
+                                    <button onclick="ingestHistoricalTxt(true)" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Lançar ADS</button>
+                                </div>
+                                <div id="historical-preview" class="mt-3 text-sm"></div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
             </div>
             <div class="px-6 py-4 flex items-center justify-end flex-shrink-0" style="border-top:1px solid var(--border);">
                 <button class="btn btn-secondary" onclick="closeGlobalAdsModal()">Fechar</button>
@@ -705,6 +750,75 @@
         loadIdMap();
     }
     function closeGlobalAdsModal() { document.getElementById('ads-global-modal').classList.add('hidden'); }
+    
+    // ===== HISTORICAL IMPORT FUNCTIONS =====
+    let _currentHistoricalMonth = null;
+    
+    function openHistoricalImport(monthCode, monthLabel) {
+        _currentHistoricalMonth = monthCode;
+        document.getElementById('historical-month-label').innerText = monthLabel;
+        document.getElementById('historical-import-area').classList.remove('hidden');
+        
+        // Preencher select com dias do mês
+        const [year, month] = monthCode.split('-');
+        const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
+        const select = document.getElementById('historical-day-select');
+        select.innerHTML = '';
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayStr = day.toString().padStart(2, '0');
+            const dateStr = `${monthCode}-${dayStr}`;
+            const option = document.createElement('option');
+            option.value = dateStr;
+            option.text = `${dayStr}/${month}/${year}`;
+            select.appendChild(option);
+        }
+        
+        // Scroll para a área de import
+        document.getElementById('historical-import-area').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
+    function closeHistoricalImport() {
+        document.getElementById('historical-import-area').classList.add('hidden');
+        document.getElementById('historical-txt').value = '';
+        document.getElementById('historical-preview').innerHTML = '';
+        _currentHistoricalMonth = null;
+    }
+    
+    async function ingestHistoricalTxt(save) {
+        const txt = document.getElementById('historical-txt').value || '';
+        const date = document.getElementById('historical-day-select').value;
+        const preview = document.getElementById('historical-preview');
+        
+        if (!txt.trim() || !date) {
+            alert('Informe a data e cole o TXT.');
+            return;
+        }
+        
+        try {
+            const token = authToken();
+            const resp = await fetch('/api/ads/ingest-txt', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+                body: JSON.stringify({date: date, content: txt, save: !!save})
+            });
+            const data = await resp.json();
+            
+            if (!resp.ok) throw new Error(data.detail || 'Falha ao processar TXT');
+            
+            preview.innerHTML = renderTxtPreview(data, save);
+            
+            if (save) {
+                await loadIdMap();
+                await updateData(true);
+                document.getElementById('historical-txt').value = '';
+                alert(`ADS de ${date} importados com sucesso!`);
+            }
+        } catch (e) {
+            preview.innerHTML = `<div class="text-danger">Erro ao importar TXT: ${e.message || e}</div>`;
+        }
+    }
+    
     function renderTxtPreview(data, save) {
         const parsed = data.parsed || [];
         const unmatched = data.unmatched || [];
