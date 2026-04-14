@@ -876,7 +876,17 @@
             const loadTime = Math.round(performance.now() - startTime);
             const sourceLabel = meta.source === 'memory' ? '⚡ memória' : meta.source === 'disk' ? '💾 disco' : '🌐 fresco';
             const ttlMinutes = meta.ttl ? Math.round(meta.ttl / 60) : 5;
-            cacheInfo.innerHTML = `Fonte: ${sourceLabel} · Cache: ${ttlMinutes}min · Tempo: ${loadTime}ms`;
+            
+            // Verificar se dados são antigos (mais de 1 hora)
+            const dataAge = meta.ts ? Math.round((Date.now() / 1000 - meta.ts) / 60) : 0;
+            const ageWarning = dataAge > 60 ? ` · ⚠️ ${Math.round(dataAge/60)}h atrás` : '';
+            
+            cacheInfo.innerHTML = `Fonte: ${sourceLabel}${ageWarning} · Cache: ${ttlMinutes}min · Tempo: ${loadTime}ms`;
+            
+            // Alerta se API está lenta
+            if (meta.source === 'disk' && dataAge > 120) {
+                cacheInfo.innerHTML += ' · 🐌 API lenta - usando cache';
+            }
             
             document.getElementById('ads-period-total').innerText = money(adsData.summary.ads_period || 0); 
             document.getElementById('ads-period-range').innerText = `${formatDateBR(adsData.summary.period_start)} → ${formatDateBR(adsData.summary.period_end)}`; 
