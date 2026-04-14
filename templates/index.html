@@ -341,7 +341,8 @@
                                 <option value="user" selected>user</option>
                                 <option value="admin">admin</option>
                             </select>
-                            <textarea id="new-user-revenda" placeholder="Revenda(s) — uma por linha. Ex:&#10;ADS - MATEUS&#10;ADS - JUNIOR&#10;ou * para admin" rows="3" class="soft-textarea w-full px-3 py-2.5 text-sm"></textarea>
+                            <div class="text-xs muted mb-1">Uma revenda por linha para dar acesso múltiplo:</div>
+                            <textarea id="new-user-revenda" placeholder="ADS - MATEUS&#10;ADS - JUNIOR&#10;ADS - GUILHERME&#10;(ou * para acesso total)" rows="4" class="soft-textarea w-full px-3 py-2.5 text-sm font-mono"></textarea>
                             <div id="users-error" class="text-sm text-danger hidden"></div>
                             <button id="create-user-btn" class="btn btn-primary w-full" onclick="createUser()">
                                 <i class="fas fa-plus"></i> Criar usuário
@@ -614,7 +615,43 @@
     function doLogout() { setAuthToken(''); showLogin(); }
     function openUsersModal() { const tok = authToken(); if (!tok) { showLogin(); return; } const me = window._authMe || {}; if (me.role !== 'admin') return; document.getElementById('users-error').classList.add('hidden'); document.getElementById('users-overlay').classList.remove('hidden'); loadUsers(); }
     function closeUsersModal() { document.getElementById('users-overlay').classList.add('hidden'); }
-    async function loadUsers() { const tok = authToken(); const tbody = document.getElementById('users-table-body'); tbody.innerHTML = ''; const resp = await fetch('/auth/users', { headers: { 'Authorization': 'Bearer ' + tok }}); const data = await resp.json(); if (!resp.ok) { document.getElementById('users-error').innerText = data.detail || 'Erro ao listar usuários'; document.getElementById('users-error').classList.remove('hidden'); return; } (data.users || []).forEach(u => { const tr = document.createElement('tr'); const revendaDisplay = Array.isArray(u.revenda) ? `${u.revenda.length} revendas` : (u.revenda || ''); const deleteBtn = u.username === window._authMe?.username ? '' : `<button class="btn btn-ghost btn-sm text-danger" onclick="deleteUser('${u.username}')"><i class="fas fa-trash"></i></button>`; tr.innerHTML = `<td class="px-3 py-2.5">${u.username || ''}</td><td class="px-3 py-2.5"><span class="pill text-xs">${u.role || ''}</span></td><td class="px-3 py-2.5"><span class="text-xs muted">${revendaDisplay}</span></td><td class="px-3 py-2.5 text-center">${deleteBtn}</td>`; tbody.appendChild(tr); }); }
+    async function loadUsers() {
+        const tok = authToken();
+        const tbody = document.getElementById('users-table-body');
+        tbody.innerHTML = '';
+        const resp = await fetch('/auth/users', { headers: { 'Authorization': 'Bearer ' + tok }});
+        const data = await resp.json();
+        if (!resp.ok) {
+            document.getElementById('users-error').innerText = data.detail || 'Erro ao listar usuários';
+            document.getElementById('users-error').classList.remove('hidden');
+            return;
+        }
+        (data.users || []).forEach(u => {
+            const tr = document.createElement('tr');
+            const rev = u.revenda;
+            let revendaDisplay = '';
+            if (Array.isArray(rev)) {
+                const tooltip = rev.join('\n');
+                revendaDisplay = `<span class="pill text-xs cursor-help" title="${tooltip}" style="cursor:help;">
+                    <i class="fas fa-layer-group text-xs"></i> ${rev.length} revendas
+                </span>`;
+            } else if (rev === '*') {
+                revendaDisplay = `<span class="pill text-xs"><i class="fas fa-infinity text-xs"></i> todas</span>`;
+            } else {
+                revendaDisplay = `<span class="text-xs muted">${rev || '—'}</span>`;
+            }
+            const isSelf = u.username === window._authMe?.username;
+            const deleteBtn = isSelf
+                ? `<span class="text-xs muted">—</span>`
+                : `<button class="btn btn-ghost btn-sm" style="color:var(--danger);" onclick="deleteUser('${u.username}')"><i class="fas fa-trash text-xs"></i></button>`;
+            tr.innerHTML = `
+                <td class="px-3 py-2.5 font-medium">${u.username || ''}</td>
+                <td class="px-3 py-2.5"><span class="pill text-xs">${u.role || ''}</span></td>
+                <td class="px-3 py-2.5">${revendaDisplay}</td>
+                <td class="px-3 py-2.5 text-center">${deleteBtn}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
     async function createUser() { const tok = authToken(); const err = document.getElementById('users-error'); err.classList.add('hidden'); const btn = document.getElementById('create-user-btn'); btn.disabled = true; try { const username = document.getElementById('new-user-username').value.trim(); const password = document.getElementById('new-user-password').value.trim(); const role = document.getElementById('new-user-role').value; const revendaText = document.getElementById('new-user-revenda').value.trim(); let revenda = revendaText; if (revendaText.includes('\n')) { revenda = revendaText.split('\n').map(l => l.trim()).filter(l => l); } const resp = await fetch('/auth/users', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }, body: JSON.stringify({ username, password, role, revenda }) }); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Erro ao criar usuário'); document.getElementById('new-user-username').value = ''; document.getElementById('new-user-password').value = ''; document.getElementById('new-user-revenda').value = ''; await loadUsers(); } catch (e) { err.innerText = e.message || 'Erro ao criar usuário'; err.classList.remove('hidden'); } finally { btn.disabled = false; } }
     async function deleteUser(username) { 
         if (!confirm(`Tem certeza que deseja deletar o usuário "${username}"?`)) return; 

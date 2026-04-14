@@ -4314,23 +4314,23 @@
     }
   },
   "logs:7:2026-04-08:2026-04-14": {
-    "ts": 1776186982.6947615,
+    "ts": 1776188767.1935825,
     "data": {
       "ranking": [
         {
           "revenda": "REVENDA GABRIEL",
-          "vendas": 234,
+          "vendas": 235,
           "conversoes": 0,
-          "testes": 961,
-          "renovacoes": 596,
-          "conversao": 24.3
+          "testes": 964,
+          "renovacoes": 597,
+          "conversao": 24.4
         },
         {
           "revenda": "ADS - EVERALDO",
           "vendas": 126,
           "conversoes": 0,
-          "testes": 453,
-          "renovacoes": 321,
+          "testes": 454,
+          "renovacoes": 322,
           "conversao": 27.8
         },
         {
@@ -4353,7 +4353,7 @@
           "revenda": "ADS - WILLIAM",
           "vendas": 80,
           "conversoes": 0,
-          "testes": 392,
+          "testes": 393,
           "renovacoes": 38,
           "conversao": 20.4
         },
@@ -4393,24 +4393,24 @@
           "revenda": "ADS - JOSE",
           "vendas": 56,
           "conversoes": 0,
-          "testes": 224,
+          "testes": 226,
           "renovacoes": 26,
-          "conversao": 25.0
+          "conversao": 24.8
         },
         {
           "revenda": "REVENDA HERON",
           "vendas": 15,
           "conversoes": 0,
-          "testes": 88,
+          "testes": 90,
           "renovacoes": 81,
-          "conversao": 17.0
+          "conversao": 16.7
         },
         {
           "revenda": "REVENDA JOAO",
           "vendas": 13,
           "conversoes": 0,
           "testes": 89,
-          "renovacoes": 114,
+          "renovacoes": 115,
           "conversao": 14.6
         },
         {
@@ -4426,7 +4426,7 @@
           "vendas": 12,
           "conversoes": 0,
           "testes": 98,
-          "renovacoes": 123,
+          "renovacoes": 124,
           "conversao": 12.2
         },
         {
@@ -4457,9 +4457,9 @@
           "revenda": "REVENDA ROGERIO",
           "vendas": 7,
           "conversoes": 0,
-          "testes": 82,
+          "testes": 83,
           "renovacoes": 26,
-          "conversao": 8.5
+          "conversao": 8.4
         },
         {
           "revenda": "REVENDA EMERSON",
@@ -4474,7 +4474,7 @@
           "vendas": 3,
           "conversoes": 0,
           "testes": 5,
-          "renovacoes": 41,
+          "renovacoes": 42,
           "conversao": 60.0
         }
       ],
