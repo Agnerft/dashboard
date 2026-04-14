@@ -523,11 +523,10 @@
                     <tr>
                         <th class="text-left">Revenda</th>
                         <th>Ativos</th>
-                        <th>ADS período</th>
                         <th>Vendas</th>
+                        <th>Renovações</th>
                         <th>Testes</th>
-                        <th>R$/Venda</th>
-                        <th>Conversão</th>
+                        <th>ADS período</th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -885,9 +884,10 @@
             renderRows(Object.values(window._baseRows)); 
             setStatus('ads', 'done', 'ADS carregado'); 
             
+            // Carregar ativos em background - sem erro visível, apenas log
             fetch(`/api/partials/ativos?force=${force ? 1 : 0}&${qs}`, { 
                 headers: { 'Authorization': 'Bearer ' + token },
-                signal: AbortSignal.timeout(90000) // 90 segundos timeout
+                signal: AbortSignal.timeout(120000) // 120 segundos timeout
             }).then(async (r) => { 
                 const d = await r.json(); 
                 if (!r.ok) throw new Error(d.detail || 'Falha ao carregar ativos'); 
@@ -897,8 +897,11 @@
                 renderRows(Object.values(window._baseRows)); 
                 setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`); 
             }).catch((e) => { 
-                console.error('Erro ativos:', e); 
-                setStatus('ativos', 'error', 'Erro ao carregar ativos (timeout)'); 
+                console.error('Erro ativos (carregando em background):', e); 
+                // Não mostra erro, mantém status de loading
+                setStatus('ativos', 'loading', 'Ativos carregando... (pode demorar)'); 
+                // Tenta novamente em 10 segundos
+                setTimeout(() => reloadAtivosSilently(qs, token), 10000);
             }); 
             
             fetch(`/api/partials/logs?force=${force ? 1 : 0}&${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Falha ao carregar logs'); return d; }).then((d) => { applyLogsToBaseRows(d); renderRows(Object.values(window._baseRows)); setStatus('vendas', 'done', 'Vendas carregadas'); setStatus('testes', 'done', 'Testes carregados'); document.getElementById('last-update').innerText = 'Atualizado: ' + new Date().toLocaleString(); }).catch((e) => { console.error(e); setStatus('vendas', 'error', 'Erro ao carregar vendas'); setStatus('testes', 'error', 'Erro ao carregar testes'); }); 
@@ -913,7 +916,27 @@
             } 
         } 
     }
-    function renderSkeletons() { const tbody = document.getElementById('table-body'); const mobile = document.getElementById('mobile-cards-wrap'); tbody.innerHTML = ''; mobile.innerHTML = ''; for (let i=0;i<4;i++) { tbody.innerHTML += `<tr class="pretty-row"><td colspan="7"><div class="skeleton h-14 w-full"></div></td></tr>`; mobile.innerHTML += `<div class="card p-4"><div class="skeleton h-24 w-full"></div></div>`; } }
+    function renderSkeletons() { const tbody = document.getElementById('table-body'); const mobile = document.getElementById('mobile-cards-wrap'); tbody.innerHTML = ''; mobile.innerHTML = ''; for (let i=0;i<4;i++) { tbody.innerHTML += `<tr class="pretty-row"><td colspan="6"><div class="skeleton h-14 w-full"></div></td></tr>`; mobile.innerHTML += `<div class="card p-4"><div class="skeleton h-24 w-full"></div></div>`; } }
+    
+    // Função para recarregar ativos silenciosamente em background
+    async function reloadAtivosSilently(qs, token) {
+        try {
+            const r = await fetch(`/api/partials/ativos?${qs}`, { 
+                headers: { 'Authorization': 'Bearer ' + token },
+                signal: AbortSignal.timeout(120000)
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail);
+            
+            applyAtivosToBaseRows(d.ativos || []);
+            renderRows(Object.values(window._baseRows));
+            setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`);
+        } catch (e) {
+            console.error('Retry ativos falhou:', e);
+            // Tenta novamente em 15 segundos
+            setTimeout(() => reloadAtivosSilently(qs, token), 15000);
+        }
+    }
     
     // ===== CAROUSEL FUNCTIONS =====
     let _carouselIndex = 0;
@@ -955,10 +978,8 @@
             const emoji = getRankEmoji(idx);
             const vendas = Number(item.vendas || 0);
             const ativos = Number(item.ativos_reais || 0);
-            const ads = Number(item.ads_period || 0);
+            const renovacoes = Number(item.renovacoes || 0);
             const testes = Number(item.testes || 0);
-            const conversao = Number(item.conversao || 0);
-            const cpa = vendas > 0 ? ads / vendas : 0;
             
             return `
             <div class="carousel-card ${rankClass}">
@@ -967,31 +988,24 @@
                         <div class="rank-badge ${rankClass}">${emoji}</div>
                         <div class="font-bold text-sm truncate max-w-[140px]">${item.revenda || item.name || '--'}</div>
                     </div>
-                    <div class="text-xs font-bold ${conversao >= 30 ? 'text-success' : conversao >= 15 ? 'text-warning' : 'muted'}">
-                        ${conversao.toFixed(1)}%
-                    </div>
                 </div>
                 
-                <div class="space-y-1">
-                    <div class="metric-row">
-                        <span class="text-xs muted">🛒 Vendas</span>
-                        <span class="font-bold text-success">${vendas.toLocaleString()}</span>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="text-center p-2 rounded-lg" style="background:var(--bg-soft);">
+                        <div class="text-xs muted mb-1">🛒 Vendas</div>
+                        <div class="font-bold text-success text-lg">${vendas.toLocaleString()}</div>
                     </div>
-                    <div class="metric-row">
-                        <span class="text-xs muted">👥 Ativos</span>
-                        <span class="font-bold text-primary">${ativos.toLocaleString()}</span>
+                    <div class="text-center p-2 rounded-lg" style="background:var(--bg-soft);">
+                        <div class="text-xs muted mb-1">👥 Ativos</div>
+                        <div class="font-bold text-primary text-lg">${ativos.toLocaleString()}</div>
                     </div>
-                    <div class="metric-row">
-                        <span class="text-xs muted">💰 ADS</span>
-                        <span class="font-semibold">${money(ads)}</span>
+                    <div class="text-center p-2 rounded-lg" style="background:var(--bg-soft);">
+                        <div class="text-xs muted mb-1">🔄 Renovações</div>
+                        <div class="font-bold text-warning text-lg">${renovacoes.toLocaleString()}</div>
                     </div>
-                    <div class="metric-row">
-                        <span class="text-xs muted">📊 CPA</span>
-                        <span class="font-semibold ${cpa > 0 && cpa <= 5 ? 'text-success' : cpa > 10 ? 'text-danger' : ''}">${cpa > 0 ? money(cpa) : '--'}</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="text-xs muted">🧪 Testes</span>
-                        <span class="font-medium">${testes.toLocaleString()}</span>
+                    <div class="text-center p-2 rounded-lg" style="background:var(--bg-soft);">
+                        <div class="text-xs muted mb-1">🧪 Testes</div>
+                        <div class="font-bold text-lg">${testes.toLocaleString()}</div>
                     </div>
                 </div>
             </div>`;
@@ -1090,8 +1104,79 @@
     function sortRows(data) { const arr = [...(data || [])]; arr.sort((a,b) => { const av = Number(a.vendas || 0), bv = Number(b.vendas || 0); if (bv !== av) return bv - av; return Number(b.ativos_reais || 0) - Number(a.ativos_reais || 0); }); return arr; }
     function getRowInsights(item) { const vendas = Number(item.vendas || 0), testes = Number(item.testes || 0), ads = Number(item.ads_period || 0); const cpa = vendas > 0 ? ads / vendas : 0; let badge = { text:'Em observação', cls:'muted' }; if (vendas >= 8 && cpa > 0 && cpa <= 5) badge = { text:'Ótimo desempenho', cls:'text-success' }; else if (ads > 0 && vendas === 0) badge = { text:'ADS sem vendas', cls:'text-danger' }; else if (testes >= 10 && vendas <= 2) badge = { text:'Baixa conversão', cls:'text-warning' }; return badge; }
     function renderRows(data) { const sorted = sortRows(data); window._rankingData = sorted; renderCarousel(sorted); renderDesktopRows(sorted); renderMobileRows(sorted); }
-    function renderDesktopRows(data) { const tbody = document.getElementById('table-body'); tbody.innerHTML = ''; data.forEach((item, idx) => { const insight = getRowInsights(item); const conv = Math.max(0, Math.min(100, Number(item.conversao || 0))); const rowClass = window._expandedIndex === idx ? 'expand-open' : ''; tbody.insertAdjacentHTML('beforeend', `<tr class="pretty-row ${rowClass}" onclick="openInlineDetails(${idx}, true)"><td><div class="flex items-center gap-3"><i class="fas fa-chevron-right expand-arrow"></i><div><div class="font-semibold text-main">${item.revenda || item.name || '--'}</div><div class="text-xs ${insight.cls} font-medium mt-0.5">${insight.text}</div></div></div></td><td class="text-center font-bold text-primary">${Number(item.ativos_reais || 0).toLocaleString()}</td><td class="text-center font-medium">${money(item.ads_period || 0)}</td><td class="text-center font-bold text-success">${Number(item.vendas || 0).toLocaleString()}</td><td class="text-center font-medium">${Number(item.testes || 0).toLocaleString()}</td><td class="text-center font-medium">${item.cost_per_sale ? money(item.cost_per_sale) : '--'}</td><td><div class="flex items-center gap-2.5 justify-end"><span class="text-xs font-bold w-10 text-right muted">${pct(conv)}</span><div class="progress max-w-[100px]"><span style="width:${conv}%"></span></div></div></td></tr><tr id="expand-row-${idx}" class="expand-row ${window._expandedIndex === idx ? '' : 'expand-hidden'}"><td colspan="7"><div class="expand-panel" id="expand-panel-${idx}">${renderInlineDetailsContent(item, idx)}</div></td></tr>`); }); }
-    function renderMobileRows(data) { const wrap = document.getElementById('mobile-cards-wrap'); wrap.innerHTML = ''; data.forEach((item, idx) => { const insight = getRowInsights(item); const conv = Math.max(0, Math.min(100, Number(item.conversao || 0))); const open = window._expandedIndex === idx; wrap.insertAdjacentHTML('beforeend', `<div class="card p-4 ${open ? 'expand-open' : ''}"><button class="w-full text-left" onclick="openInlineDetails(${idx}, true)"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><div class="flex items-center gap-2"><i class="fas fa-chevron-right expand-arrow text-xs"></i><div class="font-semibold text-main truncate">${item.revenda || item.name || '--'}</div></div><div class="text-xs mt-1 ${insight.cls} font-medium">${insight.text}</div></div><span class="pill text-xs">${money(item.ads_period || 0)}</span></div><div class="grid grid-cols-2 gap-2.5 mt-3.5"><div class="card-sm p-3"><div class="text-xs uppercase muted font-semibold">Ativos</div><div class="text-xl font-bold text-primary mt-1">${Number(item.ativos_reais || 0).toLocaleString()}</div></div><div class="card-sm p-3"><div class="text-xs uppercase muted font-semibold">Vendas</div><div class="text-xl font-bold text-success mt-1">${Number(item.vendas || 0).toLocaleString()}</div></div><div class="card-sm p-3"><div class="text-xs uppercase muted font-semibold">Testes</div><div class="text-xl font-bold mt-1">${Number(item.testes || 0).toLocaleString()}</div></div><div class="card-sm p-3"><div class="text-xs uppercase muted font-semibold">Conversão</div><div class="text-xl font-bold mt-1">${pct(conv)}</div></div></div></button><div id="mobile-expand-${idx}" class="${open ? 'mt-4' : 'hidden'}">${renderInlineDetailsContent(item, idx)}</div></div>`); }); }
+    function renderDesktopRows(data) { 
+        const tbody = document.getElementById('table-body'); 
+        tbody.innerHTML = ''; 
+        data.forEach((item, idx) => { 
+            const insight = getRowInsights(item); 
+            const rowClass = window._expandedIndex === idx ? 'expand-open' : ''; 
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr class="pretty-row ${rowClass}" onclick="openInlineDetails(${idx}, true)">
+                    <td>
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-chevron-right expand-arrow"></i>
+                            <div>
+                                <div class="font-semibold text-main">${item.revenda || item.name || '--'}</div>
+                                <div class="text-xs ${insight.cls} font-medium mt-0.5">${insight.text}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-center font-bold text-primary">${Number(item.ativos_reais || 0).toLocaleString()}</td>
+                    <td class="text-center font-bold text-success">${Number(item.vendas || 0).toLocaleString()}</td>
+                    <td class="text-center font-bold text-warning">${Number(item.renovacoes || 0).toLocaleString()}</td>
+                    <td class="text-center font-medium">${Number(item.testes || 0).toLocaleString()}</td>
+                    <td class="text-center font-medium">${money(item.ads_period || 0)}</td>
+                </tr>
+                <tr id="expand-row-${idx}" class="expand-row ${window._expandedIndex === idx ? '' : 'expand-hidden'}">
+                    <td colspan="6">
+                        <div class="expand-panel" id="expand-panel-${idx}">${renderInlineDetailsContent(item, idx)}</div>
+                    </td>
+                </tr>`); 
+        }); 
+    }
+    
+    function renderMobileRows(data) { 
+        const wrap = document.getElementById('mobile-cards-wrap'); 
+        wrap.innerHTML = ''; 
+        data.forEach((item, idx) => { 
+            const insight = getRowInsights(item); 
+            const open = window._expandedIndex === idx; 
+            wrap.insertAdjacentHTML('beforeend', `
+                <div class="card p-4 ${open ? 'expand-open' : ''}">
+                    <button class="w-full text-left" onclick="openInlineDetails(${idx}, true)">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-chevron-right expand-arrow text-xs"></i>
+                                    <div class="font-semibold text-main truncate">${item.revenda || item.name || '--'}</div>
+                                </div>
+                                <div class="text-xs mt-1 ${insight.cls} font-medium">${insight.text}</div>
+                            </div>
+                            <span class="pill text-xs">${money(item.ads_period || 0)}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5 mt-3.5">
+                            <div class="card-sm p-3">
+                                <div class="text-xs uppercase muted font-semibold">Ativos</div>
+                                <div class="text-xl font-bold text-primary mt-1">${Number(item.ativos_reais || 0).toLocaleString()}</div>
+                            </div>
+                            <div class="card-sm p-3">
+                                <div class="text-xs uppercase muted font-semibold">Vendas</div>
+                                <div class="text-xl font-bold text-success mt-1">${Number(item.vendas || 0).toLocaleString()}</div>
+                            </div>
+                            <div class="card-sm p-3">
+                                <div class="text-xs uppercase muted font-semibold">Renovações</div>
+                                <div class="text-xl font-bold text-warning mt-1">${Number(item.renovacoes || 0).toLocaleString()}</div>
+                            </div>
+                            <div class="card-sm p-3">
+                                <div class="text-xs uppercase muted font-semibold">Testes</div>
+                                <div class="text-xl font-bold mt-1">${Number(item.testes || 0).toLocaleString()}</div>
+                            </div>
+                        </div>
+                    </button>
+                    <div id="mobile-expand-${idx}" class="${open ? 'mt-4' : 'hidden'}">${renderInlineDetailsContent(item, idx)}</div>
+                </div>`); 
+        }); 
+    }
     function renderInlineDetailsContent(item, idx) { const details = window._detailCache?.[idx]; const loading = !details; const weekDays = details?.week?.days || []; const sales = Number(item.vendas || 0); const weekTotal = Number(details?.week?.total || 0); const monthTotal = Number(details?.month?.total || 0); const yearTotal = Number(details?.year?.total || 0); const cps = sales > 0 ? weekTotal / sales : 0; const weekInputs = loading ? `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">${Array.from({length:6}).map(()=>`<div class="skeleton h-14 w-full"></div>`).join('')}</div>` : `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">${weekDays.map((d, i) => `<div class="card-sm p-3 flex items-center justify-between gap-2"><div><div class="font-semibold text-main text-sm">${formatDateBR(d.date)}</div><div class="text-xs muted">Lançamento diário</div></div><div class="flex items-center gap-1.5"><span class="muted text-sm">R$</span><input id="ads-day-${idx}-${i}" type="number" step="0.01" min="0" value="${Number(d.amount || 0)}" class="soft-input w-24 px-2.5 py-1.5 text-sm" /></div></div>`).join('')}</div>`; return `<div class="space-y-4"><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"><div class="card-sm p-4"><div class="text-xs uppercase font-semibold muted">Semana (R$)</div><div class="text-2xl font-bold text-main mt-1">${money(weekTotal)}</div><div class="text-xs muted mt-1">${details ? `${formatDateBR(details.week.start)} → ${formatDateBR(details.week.end)}` : 'Carregando...'}</div></div><div class="card-sm p-4"><div class="text-xs uppercase font-semibold muted">Mês (R$)</div><div class="text-2xl font-bold text-main mt-1">${money(monthTotal)}</div><div class="text-xs muted mt-1">${details ? `${formatDateBR(details.month.start)} → ${formatDateBR(details.month.end)}` : 'Carregando...'}</div></div><div class="card-sm p-4"><div class="text-xs uppercase font-semibold muted">Ano (R$)</div><div class="text-2xl font-bold text-main mt-1">${money(yearTotal)}</div><div class="text-xs muted mt-1">${details ? `${formatDateBR(details.year.start)} → ${formatDateBR(details.year.end)}` : 'Carregando...'}</div></div><div class="card-sm p-4"><div class="text-xs uppercase font-semibold muted">ROI (período)</div><div class="mt-2.5 space-y-2 text-sm"><div class="flex items-center justify-between"><span class="muted">Vendas</span><span class="font-semibold text-main">${sales.toLocaleString()}</span></div><div class="flex items-center justify-between"><span class="muted">R$ / venda</span><span class="font-semibold text-main">${sales > 0 ? money(cps) : '--'}</span></div></div></div></div><details class="card-sm overflow-hidden"><summary class="px-4 py-3 font-semibold cursor-pointer text-main flex items-center justify-between text-sm"><span class="flex items-center gap-2"><i class="fas fa-paste muted text-xs"></i> Importar TXT (colar)</span><i class="fas fa-chevron-down muted text-xs"></i></summary><div class="px-4 pb-4 pt-3 border-t space-y-3" style="border-color:var(--border);"><div class="flex flex-col md:flex-row items-start md:items-center gap-2.5"><label class="text-sm muted">Data (YYYY-MM-DD)</label><input id="ads-ingest-date-${idx}" type="date" class="soft-input px-3 py-2 text-sm" /><button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); ingestTxtInline(${idx}, true)">Lançar TXT</button><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); ingestTxtInline(${idx}, false)">Pré-visualizar</button></div><textarea id="ads-ingest-text-${idx}" rows="5" class="soft-textarea w-full px-3 py-2 text-sm" placeholder="Cole aqui os blocos TXT desta revenda"></textarea><div id="ads-ingest-preview-${idx}" class="text-sm"></div></div></details><details class="card-sm overflow-hidden"><summary class="px-4 py-3 font-semibold cursor-pointer text-main flex items-center justify-between text-sm"><span class="flex items-center gap-2"><i class="fas fa-file-code muted text-xs"></i> Importar JSON (arquivo)</span><i class="fas fa-chevron-down muted text-xs"></i></summary><div class="px-4 pb-4 pt-3 border-t space-y-3" style="border-color:var(--border);"><div class="flex flex-col md:flex-row items-start md:items-center gap-2.5"><input id="ads-json-file-${idx}" type="file" accept="application/json" class="block text-sm muted" /><button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); ingestJsonFileInline(${idx})">Enviar JSON</button></div><div class="text-xs muted">Formato esperado: lista de objetos { "revenda": "...", "entries": [ { "date": "YYYY-MM-DD", "amount": 123.45 } ] }</div><div id="ads-json-preview-${idx}" class="text-sm"></div></div></details><div class="card-sm p-4 space-y-4"><div class="flex items-center justify-between gap-3 flex-wrap"><div><div class="font-semibold text-main text-sm">Semana — valores diários</div><div class="text-xs muted">Ajuste os valores e salve</div></div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); saveInlineAdsWeek(${idx})"><i class="fas fa-save"></i> Salvar semana</button></div>${weekInputs}</div></div>`; }
     async function openInlineDetails(idx, scrollTo) { if (window._expandedIndex === idx) { window._expandedIndex = null; renderRows(window._rankingData); return; } window._expandedIndex = idx; renderRows(window._rankingData); if (!window._detailCache[idx]) await fetchAdsSummaryForIndex(idx); renderRows(window._rankingData); if (scrollTo) { const target = document.getElementById(`expand-panel-${idx}`) || document.getElementById(`mobile-expand-${idx}`); if (target) target.scrollIntoView({ behavior:'smooth', block:'nearest' }); } }
     async function fetchAdsSummaryForIndex(idx) { const item = window._rankingData[idx]; if (!item) return; const token = authToken(); try { const resp = await fetch(`/api/ads/summary?revenda=${encodeURIComponent(item.revenda)}`, { headers: { 'Authorization': 'Bearer ' + token }}); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Falha ao carregar ADS'); window._detailCache[idx] = data; } catch (e) { console.error(e); alert('Erro ao carregar ADS desta revenda.'); } }
