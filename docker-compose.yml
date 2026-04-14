@@ -1,12 +1,16 @@
-version: "3.9"
 services:
   dashboard:
     build: .
     container_name: dash_revendas
     ports:
-      - "8080:8080"
+      - "8504:8504"
     environment:
       - HOST=0.0.0.0
-      - PORT=8080
+      - PORT=8504
       - DASH_AUTH_SECRET=${DASH_AUTH_SECRET}
     restart: unless-stopped
+    volumes:
+      - /opt/proj25-dash/users.json:/app/users.json
+      - /opt/proj25-dash/ads_spend.json:/app/ads_spend.json
+      - /opt/proj25-dash/ads_id_map.json:/app/ads_id_map.json
+      - /opt/proj25-dash/data_cache.json:/app/data_cache.json
