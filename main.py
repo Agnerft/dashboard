@@ -63,10 +63,8 @@ def _load_ads_id_map() -> dict:
 
 
 def _save_ads_id_map(mapping: dict):
-    tmp = _ADS_ID_MAP_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+    with open(_ADS_ID_MAP_FILE, "w", encoding="utf-8") as f:
         json.dump(mapping, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, _ADS_ID_MAP_FILE)
 
 
 def _learn_ads_id(ads_id: int, canonical: str):
@@ -146,10 +144,8 @@ def _load_ads_store():
 
 
 def _save_ads_store(data):
-    tmp_path = _ADS_FILE_PATH + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
+    with open(_ADS_FILE_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, _ADS_FILE_PATH)
 
 
 def _load_data_cache():
@@ -163,10 +159,8 @@ def _load_data_cache():
 
 
 def _save_data_cache(cache):
-    tmp_path = _DATA_CACHE_PATH + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
+    with open(_DATA_CACHE_PATH, "w", encoding="utf-8") as f:
         json.dump(cache, f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, _DATA_CACHE_PATH)
 
 
 def _norm_text(value):
@@ -296,10 +290,8 @@ def _load_users():
 
 
 def _save_users(users: list[dict]):
-    tmp_path = _USERS_FILE + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
+    with open(_USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, _USERS_FILE)
 
 
 def _hash_password(password: str) -> str:
