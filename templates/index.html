@@ -425,6 +425,10 @@
             <div id="status-vendas" class="status-chip"><span class="status-dot"></span><span>Vendas aguardando</span></div>
             <div id="status-testes" class="status-chip"><span class="status-dot"></span><span>Testes aguardando</span></div>
         </div>
+        <div class="flex items-center justify-between gap-2 mt-2 text-xs">
+            <div id="cache-info" class="muted"></div>
+            <div id="last-update" class="muted"></div>
+        </div>
     </section>
 
     <!-- ── KPI Cards ──────────────────────────────────────────────── -->
@@ -708,7 +712,58 @@
     function initBaseRowsFromAds(adsData) { const baseRows = {}; (adsData.rows || []).forEach(r => { baseRows[r.revenda] = { revenda: r.revenda, ativos_reais: 0, vendas: 0, testes: 0, conversao: 0, ads_period: r.ads_period || 0, cost_per_sale: 0, total_clientes: 0, novos_clientes: 0, testes_ativos: 0 }; }); window._baseRows = baseRows; return baseRows; }
     function applyAtivosToBaseRows(ativosList) { const baseRows = window._baseRows || {}; let totalClientes = 0, ativosReaisTotal = 0, testesAtivosTotal = 0, novosClientesTotal = 0; (ativosList || []).forEach(a => { totalClientes += (a.total_clientes || 0); ativosReaisTotal += (a.ativos_reais || 0); testesAtivosTotal += (a.testes_ativos || 0); novosClientesTotal += (a.novos_clientes || 0); baseRows[a.name] = baseRows[a.name] || { revenda: a.name, ativos_reais:0, vendas:0, testes:0, conversao:0, ads_period:0, cost_per_sale:0, total_clientes:0, novos_clientes:0, testes_ativos:0 }; baseRows[a.name].ativos_reais = a.ativos_reais || 0; baseRows[a.name].total_clientes = a.total_clientes || 0; baseRows[a.name].novos_clientes = a.novos_clientes || 0; baseRows[a.name].testes_ativos = a.testes_ativos || 0; }); document.getElementById('kpi-total-clientes').innerText = totalClientes.toLocaleString(); document.getElementById('kpi-ativos-reais').innerText = ativosReaisTotal.toLocaleString(); document.getElementById('kpi-testes-ativos').innerText = testesAtivosTotal.toLocaleString(); document.getElementById('kpi-novos-clientes').innerText = novosClientesTotal.toLocaleString(); window._baseRows = baseRows; }
     function applyLogsToBaseRows(data) { const baseRows = window._baseRows || {}; (data.ranking || []).forEach(row => { const name = row.revenda; baseRows[name] = baseRows[name] || { revenda: name, ativos_reais:0, vendas:0, testes:0, conversao:0, ads_period:0, cost_per_sale:0, total_clientes:0, novos_clientes:0, testes_ativos:0 }; baseRows[name].vendas = row.vendas || 0; baseRows[name].testes = row.testes || 0; baseRows[name].conversao = row.conversao || 0; const salesTotal = (row.vendas || 0); const adsPeriod = baseRows[name].ads_period || 0; baseRows[name].cost_per_sale = salesTotal > 0 ? +(adsPeriod / salesTotal).toFixed(2) : 0; }); window._baseRows = baseRows; }
-    async function updateData(force) { const token = authToken(); if (!token) { showLogin(); return; } const qs = periodQueryString(); const overlay = document.getElementById('loading-overlay'); const btn = document.getElementById('refresh-btn'); setStatus('ads', 'loading', 'ADS carregando...'); setStatus('ativos', 'loading', 'Ativos carregando...'); setStatus('vendas', 'loading', 'Vendas carregando...'); setStatus('testes', 'loading', 'Testes carregando...'); renderSkeletons(); try { if (force) { overlay.classList.remove('hidden'); if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...'; } } const adsResp = await fetch(`/api/ads/all?${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}); if (!adsResp.ok) throw new Error('Falha ao carregar ADS'); const adsData = await adsResp.json(); document.getElementById('ads-period-total').innerText = money(adsData.summary.ads_period || 0); document.getElementById('ads-period-range').innerText = `${formatDateBR(adsData.summary.period_start)} → ${formatDateBR(adsData.summary.period_end)}`; initBaseRowsFromAds(adsData); renderRows(Object.values(window._baseRows)); setStatus('ads', 'done', 'ADS carregado'); fetch(`/api/partials/ativos?force=${force ? 1 : 0}&${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Falha ao carregar ativos'); return d; }).then((d) => { applyAtivosToBaseRows(d.ativos || []); renderRows(Object.values(window._baseRows)); setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`); }).catch((e) => { console.error(e); setStatus('ativos', 'error', 'Erro ao carregar ativos'); }); fetch(`/api/partials/logs?force=${force ? 1 : 0}&${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Falha ao carregar logs'); return d; }).then((d) => { applyLogsToBaseRows(d); renderRows(Object.values(window._baseRows)); setStatus('vendas', 'done', 'Vendas carregadas'); setStatus('testes', 'done', 'Testes carregados'); document.getElementById('last-update').innerText = new Date().toLocaleString(); }).catch((e) => { console.error(e); setStatus('vendas', 'error', 'Erro ao carregar vendas'); setStatus('testes', 'error', 'Erro ao carregar testes'); }); } catch (error) { console.error('Erro ao buscar dados:', error); alert('Falha ao atualizar dados. Verifique a conexão com o servidor.'); setStatus('ads', 'error', 'Erro ao carregar ADS'); } finally { if (force) { overlay.classList.add('hidden'); if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Atualizar'; } } } }
+    async function updateData(force) { 
+        const token = authToken(); 
+        if (!token) { showLogin(); return; } 
+        const qs = periodQueryString(); 
+        const overlay = document.getElementById('loading-overlay'); 
+        const btn = document.getElementById('refresh-btn');
+        const cacheInfo = document.getElementById('cache-info');
+        const startTime = performance.now();
+        
+        setStatus('ads', 'loading', 'ADS carregando...'); 
+        setStatus('ativos', 'loading', 'Ativos carregando...'); 
+        setStatus('vendas', 'loading', 'Vendas carregando...'); 
+        setStatus('testes', 'loading', 'Testes carregando...'); 
+        renderSkeletons(); 
+        
+        try { 
+            if (force) { 
+                overlay.classList.remove('hidden'); 
+                if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...'; } 
+            } 
+            
+            const adsResp = await fetch(`/api/ads/all?${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}); 
+            if (!adsResp.ok) throw new Error('Falha ao carregar ADS'); 
+            const adsData = await adsResp.json(); 
+            
+            // Mostrar info de cache
+            const meta = adsData.meta || {};
+            const loadTime = Math.round(performance.now() - startTime);
+            const sourceLabel = meta.source === 'memory' ? '⚡ memória' : meta.source === 'disk' ? '💾 disco' : '🌐 fresco';
+            const ttlMinutes = meta.ttl ? Math.round(meta.ttl / 60) : 5;
+            cacheInfo.innerHTML = `Fonte: ${sourceLabel} · Cache: ${ttlMinutes}min · Tempo: ${loadTime}ms`;
+            
+            document.getElementById('ads-period-total').innerText = money(adsData.summary.ads_period || 0); 
+            document.getElementById('ads-period-range').innerText = `${formatDateBR(adsData.summary.period_start)} → ${formatDateBR(adsData.summary.period_end)}`; 
+            initBaseRowsFromAds(adsData); 
+            renderRows(Object.values(window._baseRows)); 
+            setStatus('ads', 'done', 'ADS carregado'); 
+            
+            fetch(`/api/partials/ativos?force=${force ? 1 : 0}&${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Falha ao carregar ativos'); return d; }).then((d) => { applyAtivosToBaseRows(d.ativos || []); renderRows(Object.values(window._baseRows)); setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`); }).catch((e) => { console.error(e); setStatus('ativos', 'error', 'Erro ao carregar ativos'); }); 
+            
+            fetch(`/api/partials/logs?force=${force ? 1 : 0}&${qs}`, { headers: { 'Authorization': 'Bearer ' + token }}).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.detail || 'Falha ao carregar logs'); return d; }).then((d) => { applyLogsToBaseRows(d); renderRows(Object.values(window._baseRows)); setStatus('vendas', 'done', 'Vendas carregadas'); setStatus('testes', 'done', 'Testes carregados'); document.getElementById('last-update').innerText = 'Atualizado: ' + new Date().toLocaleString(); }).catch((e) => { console.error(e); setStatus('vendas', 'error', 'Erro ao carregar vendas'); setStatus('testes', 'error', 'Erro ao carregar testes'); }); 
+        } catch (error) { 
+            console.error('Erro ao buscar dados:', error); 
+            alert('Falha ao atualizar dados. Verifique a conexão com o servidor.'); 
+            setStatus('ads', 'error', 'Erro ao carregar ADS'); 
+        } finally { 
+            if (force) { 
+                overlay.classList.add('hidden'); 
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Atualizar'; } 
+            } 
+        } 
+    }
     function renderSkeletons() { const tbody = document.getElementById('table-body'); const mobile = document.getElementById('mobile-cards-wrap'); tbody.innerHTML = ''; mobile.innerHTML = ''; for (let i=0;i<4;i++) { tbody.innerHTML += `<tr class="pretty-row"><td colspan="7"><div class="skeleton h-14 w-full"></div></td></tr>`; mobile.innerHTML += `<div class="card p-4"><div class="skeleton h-24 w-full"></div></div>`; } }
     function sortRows(data) { const arr = [...(data || [])]; arr.sort((a,b) => { const av = Number(a.vendas || 0), bv = Number(b.vendas || 0); if (bv !== av) return bv - av; return Number(b.ativos_reais || 0) - Number(a.ativos_reais || 0); }); return arr; }
     function getRowInsights(item) { const vendas = Number(item.vendas || 0), testes = Number(item.testes || 0), ads = Number(item.ads_period || 0); const cpa = vendas > 0 ? ads / vendas : 0; let badge = { text:'Em observação', cls:'muted' }; if (vendas >= 8 && cpa > 0 && cpa <= 5) badge = { text:'Ótimo desempenho', cls:'text-success' }; else if (ads > 0 && vendas === 0) badge = { text:'ADS sem vendas', cls:'text-danger' }; else if (testes >= 10 && vendas <= 2) badge = { text:'Baixa conversão', cls:'text-warning' }; return badge; }

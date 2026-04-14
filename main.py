@@ -36,6 +36,7 @@ async def read_root():
 
 _CACHE = {}
 _CACHE_TTL_SECONDS = 300
+_CACHE_TTL_HISTORICAL_SECONDS = 86400  # 24 horas para dados históricos (ontem, etc)
 
 _ADS_LOCK = threading.Lock()
 _ADS_FILE_PATH = os.path.join(BASE_DIR, "ads_spend.json")
@@ -186,6 +187,18 @@ def _month_range(d: date):
         next_month = start.replace(month=start.month + 1)
     end = next_month - timedelta(days=1)
     return start, end
+
+
+def _get_cache_ttl(period: str | None, days: int) -> int:
+    """Retorna TTL apropriado baseado no período. Dados históricos = cache longo."""
+    p = (period or "").strip().lower()
+    # Períodos históricos (ontem, etc) não mudam - cache de 24h
+    if p in {"yesterday", "ontem"}:
+        return _CACHE_TTL_HISTORICAL_SECONDS
+    # Se days > 1 e não é "today", provavelmente é período passado
+    if days > 1 and p not in {"today", "hoje"}:
+        return _CACHE_TTL_HISTORICAL_SECONDS
+    return _CACHE_TTL_SECONDS
 
 
 def _period_cache_key(period: str | None, days: int = 7) -> str:
@@ -573,10 +586,11 @@ def get_data(days: int = 7, period: str | None = None, force: int = 0, request: 
     period_key = _period_cache_key(period, days)
     cache_key = f"days:{period_key}"
     now = time.time()
+    ttl = _get_cache_ttl(period, days)
 
-    if cache_key in _CACHE and (now - _CACHE[cache_key]["ts"]) < _CACHE_TTL_SECONDS and not force:
+    if cache_key in _CACHE and (now - _CACHE[cache_key]["ts"]) < ttl and not force:
         data = _CACHE[cache_key]["data"].copy()
-        data["meta"] = {"source": "memory", "refreshing": False, "ts": _CACHE[cache_key]["ts"]}
+        data["meta"] = {"source": "memory", "refreshing": False, "ts": _CACHE[cache_key]["ts"], "ttl": ttl}
         if user_role != "admin" and user_rev and isinstance(data.get("charts", {}).get("ranking"), list):
             rows = [r for r in data["charts"]["ranking"] if _user_can_see(user_role, user_rev, r.get("revenda", ""))]
             data["charts"]["ranking"] = rows
@@ -588,6 +602,20 @@ def get_data(days: int = 7, period: str | None = None, force: int = 0, request: 
 
     disk_cache = _load_data_cache()
     disk_entry = disk_cache.get(cache_key)
+
+    # Se temos dados em disco e não estão expirados, use-os
+    if disk_entry and not force:
+        disk_age = now - disk_entry.get("ts", 0)
+        if disk_age < ttl:
+            # Retorna do disco e atualiza cache em memória
+            _CACHE[cache_key] = {"ts": disk_entry["ts"], "data": disk_entry["data"]}
+            data = disk_entry["data"].copy()
+            data["meta"] = {"source": "disk", "refreshing": False, "ts": disk_entry.get("ts"), "ttl": ttl}
+            if user_role != "admin" and user_rev and isinstance(data.get("charts", {}).get("ranking"), list):
+                rows = [r for r in data["charts"]["ranking"] if _user_can_see(user_role, user_rev, r.get("revenda", ""))]
+                data["charts"]["ranking"] = rows
+                data["summary"]["vendas"] = sum(int(r.get("vendas", 0) or 0) for r in rows)
+            return data
 
     if force and disk_entry:
         if cache_key not in _REFRESH_THREADS or not _REFRESH_THREADS[cache_key].is_alive():
@@ -607,7 +635,7 @@ def get_data(days: int = 7, period: str | None = None, force: int = 0, request: 
             t.start()
 
         resp = disk_entry["data"].copy()
-        resp["meta"] = {"source": "disk", "refreshing": True, "ts": disk_entry.get("ts")}
+        resp["meta"] = {"source": "disk", "refreshing": True, "ts": disk_entry.get("ts"), "ttl": ttl}
         return resp
 
     payload = _compute_payload(days, period)
@@ -616,7 +644,7 @@ def get_data(days: int = 7, period: str | None = None, force: int = 0, request: 
     _save_data_cache(disk_cache)
 
     data = payload.copy()
-    data["meta"] = {"source": "fresh", "refreshing": False, "ts": _CACHE[cache_key]["ts"]}
+    data["meta"] = {"source": "fresh", "refreshing": False, "ts": _CACHE[cache_key]["ts"], "ttl": ttl}
 
     if user_role != "admin" and user_rev and isinstance(data.get("charts", {}).get("ranking"), list):
         rows = [r for r in data["charts"]["ranking"] if _user_can_see(user_role, user_rev, r.get("revenda", ""))]
@@ -1309,6 +1337,60 @@ def bulk_ads_entries(payload: list[AdsEntriesPayload], request: Request):
         _save_ads_store(store)
 
     return {"status": "ok", "updated": updated, "revendas": len(agg)}
+
+
+@app.get("/api/health")
+def health_check():
+    """Endpoint para verificar saúde da API e status do cache."""
+    now = time.time()
+    cache_info = {}
+    for key, entry in _CACHE.items():
+        age = now - entry.get("ts", 0)
+        cache_info[key] = {
+            "age_seconds": round(age, 1),
+            "age_minutes": round(age / 60, 1),
+            "has_data": bool(entry.get("data"))
+        }
+    return {
+        "status": "ok",
+        "cache_entries": len(_CACHE),
+        "cache_details": cache_info,
+        "timestamp": now
+    }
+
+
+@app.post("/api/cache/warm")
+def warm_cache(request: Request):
+    """Admin: Pré-carrega dados comuns no cache (hoje, ontem, 7 dias)."""
+    scope = _auth_scope_from_request(request)
+    if scope.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="forbidden")
+    
+    import threading as _th
+    
+    def _warm():
+        periods = [
+            ("today", 1),
+            ("yesterday", 1),
+            (None, 7),
+        ]
+        for period, days in periods:
+            try:
+                payload = _compute_payload(days, period)
+                period_key = _period_cache_key(period, days)
+                cache_key = f"days:{period_key}"
+                _CACHE[cache_key] = {"ts": time.time(), "data": payload}
+                disk_cache = _load_data_cache()
+                disk_cache[cache_key] = {"ts": _CACHE[cache_key]["ts"], "data": payload}
+                _save_data_cache(disk_cache)
+                logger.info(f"Cache warmed for {cache_key}")
+            except Exception as e:
+                logger.exception(f"Erro ao warmar cache para {period}: {e}")
+    
+    t = _th.Thread(target=_warm, daemon=True)
+    t.start()
+    
+    return {"status": "warming_started", "message": "Cache sendo pré-carregado em background"}
 
 
 if __name__ == "__main__":
