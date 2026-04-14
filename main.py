@@ -856,19 +856,22 @@ def partial_ativos(force: int = 0, days: int = 7, period: str | None = None, req
     key = f"ativos:{_period_cache_key(period, days)}"
     now = time.time()
 
+    # Sempre retorna cache imediatamente se disponível
     if not force and key in _CACHE and (now - _CACHE[key]["ts"]) < _CACHE_TTL_SECONDS:
         data = _CACHE[key]["data"]
         return {"ativos": _apply_scope_to_ativos(data, user_role, user_rev), "source": "memory"}
 
     if not force and key in cache:
+        # Inicia refresh em background se não estiver rodando
         if key not in _REFRESH_THREADS or not _REFRESH_THREADS[key].is_alive():
             import threading as _th
 
             def _refresh():
                 from dashboard_data import REVENDEDORES_IDS
                 try:
+                    logger.info("Iniciando refresh de ativos em background...")
                     data2 = get_ativos(REVENDEDORES_IDS)
-                    logger.info("Refresh /api/partials/ativos retornou %s registros.", len(data2) if isinstance(data2, list) else "inválido")
+                    logger.info("Refresh ativos retornou %s registros.", len(data2) if isinstance(data2, list) else "inválido")
                     if _valid_ativos(data2):
                         _CACHE[key] = {"ts": time.time(), "data": data2}
                         cache[key] = {"ts": _CACHE[key]["ts"], "data": data2}
@@ -887,25 +890,32 @@ def partial_ativos(force: int = 0, days: int = 7, period: str | None = None, req
         data = entry.get("data") if isinstance(entry, dict) else entry
         return {"ativos": _apply_scope_to_ativos(data, user_role, user_rev), "source": "disk"}
 
+    # Se não tem cache, retorna vazio e inicia carregamento em background
     from dashboard_data import REVENDEDORES_IDS
-    try:
-        data = get_ativos(REVENDEDORES_IDS)
-        logger.info("get_ativos retornou %s registros.", len(data) if isinstance(data, list) else "inválido")
-
-        if not _valid_ativos(data):
-            raise HTTPException(status_code=502, detail="get_ativos retornou vazio ou formato inválido")
-
-        _CACHE[key] = {"ts": time.time(), "data": data}
-        cache[key] = {"ts": _CACHE[key]["ts"], "data": data}
-        _save_data_cache(cache)
-
-        return {"ativos": _apply_scope_to_ativos(data, user_role, user_rev), "source": "fresh"}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception("Erro ao buscar ativos.")
-        raise HTTPException(status_code=500, detail=f"erro ao buscar ativos: {str(e)}")
+    
+    def _load_in_background():
+        try:
+            logger.info("Carregando ativos em background (primeira vez)...")
+            data = get_ativos(REVENDEDORES_IDS)
+            if _valid_ativos(data):
+                _CACHE[key] = {"ts": time.time(), "data": data}
+                cache[key] = {"ts": _CACHE[key]["ts"], "data": data}
+                _save_data_cache(cache)
+                logger.info("Ativos carregados em background: %s registros", len(data))
+        except Exception as e:
+            logger.exception("Erro ao carregar ativos em background: %s", e)
+    
+    import threading as _th
+    t = _th.Thread(target=_load_in_background, daemon=True)
+    t.start()
+    
+    # Retorna dados do cache se existirem, senão vazio
+    entry = cache.get(key)
+    if entry:
+        data = entry.get("data") if isinstance(entry, dict) else entry
+        return {"ativos": _apply_scope_to_ativos(data, user_role, user_rev), "source": "disk"}
+    
+    return {"ativos": [], "source": "loading"}
 
 
 @app.get("/api/partials/logs")

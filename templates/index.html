@@ -886,16 +886,22 @@
             
             // Carregar ativos em background - sem erro visível, apenas log
             fetch(`/api/partials/ativos?force=${force ? 1 : 0}&${qs}`, { 
-                headers: { 'Authorization': 'Bearer ' + token },
-                signal: AbortSignal.timeout(120000) // 120 segundos timeout
+                headers: { 'Authorization': 'Bearer ' + token }
             }).then(async (r) => { 
                 const d = await r.json(); 
                 if (!r.ok) throw new Error(d.detail || 'Falha ao carregar ativos'); 
                 return d; 
             }).then((d) => { 
-                applyAtivosToBaseRows(d.ativos || []); 
-                renderRows(Object.values(window._baseRows)); 
-                setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`); 
+                if (d.source === 'loading') {
+                    // Ainda carregando em background
+                    setStatus('ativos', 'loading', 'Ativos carregando... (pode demorar)');
+                    // Tenta novamente em 5 segundos
+                    setTimeout(() => reloadAtivosSilently(qs, token), 5000);
+                } else {
+                    applyAtivosToBaseRows(d.ativos || []); 
+                    renderRows(Object.values(window._baseRows)); 
+                    setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`); 
+                }
             }).catch((e) => { 
                 console.error('Erro ativos (carregando em background):', e); 
                 // Não mostra erro, mantém status de loading
@@ -922,19 +928,24 @@
     async function reloadAtivosSilently(qs, token) {
         try {
             const r = await fetch(`/api/partials/ativos?${qs}`, { 
-                headers: { 'Authorization': 'Bearer ' + token },
-                signal: AbortSignal.timeout(120000)
+                headers: { 'Authorization': 'Bearer ' + token }
             });
             const d = await r.json();
             if (!r.ok) throw new Error(d.detail);
+            
+            if (d.source === 'loading') {
+                // Ainda carregando, tenta novamente em 5s
+                setTimeout(() => reloadAtivosSilently(qs, token), 5000);
+                return;
+            }
             
             applyAtivosToBaseRows(d.ativos || []);
             renderRows(Object.values(window._baseRows));
             setStatus('ativos', 'done', `Ativos carregados${d.source ? ' · ' + d.source : ''}`);
         } catch (e) {
             console.error('Retry ativos falhou:', e);
-            // Tenta novamente em 15 segundos
-            setTimeout(() => reloadAtivosSilently(qs, token), 15000);
+            // Tenta novamente em 10 segundos
+            setTimeout(() => reloadAtivosSilently(qs, token), 10000);
         }
     }
     

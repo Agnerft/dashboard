@@ -163,7 +163,7 @@ def _get_log_window(days=7, period=None, start_ts=None, end_ts=None):
     return int(start_date.timestamp()), int(end_date.timestamp())
 
 
-def get_ativos(revendedores_ids):
+def get_ativos(revendedores_ids, use_cache_only=False):
     base_url = "https://api.painel.best/lines/"
     data = []
 
@@ -173,12 +173,26 @@ def get_ativos(revendedores_ids):
 
         now = time.time()
         cache_entry = _lines_cache.get(uid)
+        
+        # Se tem cache válido, usa ele imediatamente
         if cache_entry and (now - cache_entry["ts"]) < _lines_cache_ttl_seconds:
             cached = cache_entry["data"].copy()
             cached["name"] = nome
+            cached["from_cache"] = True
             return cached
+        
+        # Se só quer cache, não faz requisição
+        if use_cache_only:
+            return {
+                "name": nome,
+                "total_clientes": 0,
+                "ativos_reais": 0,
+                "testes_ativos": 0,
+                "novos_clientes": 0,
+                "loading": True
+            }
 
-        def fetch_count(extra_params=None, timeout=15):
+        def fetch_count(extra_params=None, timeout=12):
             params = {"user_id": uid, "page": 1, "per_page": 1}
             if extra_params:
                 params.update(extra_params)
@@ -213,7 +227,7 @@ def get_ativos(revendedores_ids):
             fallback["stale"] = bool(cache_entry)
             return fallback
 
-    max_workers = min(16, max(4, len(revendedores_ids) or 1))
+    max_workers = min(20, max(4, len(revendedores_ids) or 1))
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
             executor.submit(fetch_one, nome, uid)
@@ -222,7 +236,7 @@ def get_ativos(revendedores_ids):
         ]
         for fut in as_completed(futures):
             try:
-                r = fut.result(timeout=60)  # Timeout total por worker
+                r = fut.result(timeout=45)  # Timeout total por worker
                 if r is not None:
                     data.append(r)
             except Exception as e:
